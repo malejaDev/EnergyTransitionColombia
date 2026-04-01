@@ -1,6 +1,6 @@
 # ⚡ EnergyTransitionColombia
 
-**EnergyTransitionColombia** es un producto de datos que combina un **modelo dimensional en MySQL** (matriz energética Colombia, 2020–2025) con un **dashboard en Streamlit** orientado a explorar la transición energética: proyectos por tecnología y región, costos (LCOE, CAPEX, OPEX), cobertura y disponibilidad, marco regulatorio, y en base de datos además **generación diaria** e **impacto ambiental**. La aplicación publicada hoy alimenta la interfaz con **datos mock en Python** que replican la lógica del modelo; la capa SQL es el **contrato de datos** y el lugar donde conviene concentrar análisis reproduccibles, calidad y extensiones de modelado.
+**EnergyTransitionColombia** articula tres capas: **análisis exploratorio y de ingeniería de variables en notebook** (`notebook/Transicion_Energetica.ipynb`), **persistencia y consultas analíticas en MySQL** (`database/`), y un **dashboard en Streamlit** para exploración operativa: proyectos por tecnología y región, costos (LCOE, CAPEX, OPEX), cobertura y disponibilidad, marco regulatorio, y en base de datos además **generación diaria** e **impacto ambiental**. La app publicada alimenta la interfaz con **datos mock en Python** coherentes con el modelo dimensional; la base SQL y el cuaderno son el lugar donde concentrar **trazabilidad, calidad de datos y narrativa analítica** antes o en paralelo al producto interactivo.
 
 **App en producción:** [https://energytransitioncolombia.streamlit.app/](https://energytransitioncolombia.streamlit.app/)  
 **Entrada principal del código:** `EnergyTransitionColombia/streamlit_app.py`
@@ -37,11 +37,34 @@ EnergyTransitionColombia/
   database/
     Matriz_Energetica_Colombia_Schema_y_Datos_2020_2025.sql   # BD, tablas, cargas
     Consultas_Analisis_Matriz_Energetica_Colombia.sql       # Consultas Q01, Q02, …
+  notebook/
+    Transicion_Energetica.ipynb  # EDA, calidad, features, visualización (Jupyter/Colab)
   streamlit_app.py      # UI, agregaciones, gráficas (pandas + Altair)
   requirements.txt
   .streamlit/config.toml
   README.md
 ```
+
+---
+
+## 📓 Cuaderno de análisis (laboratorio de ciencia de datos)
+
+En `notebook/Transicion_Energetica.ipynb` está el **hilo analítico principal** del equipo (actualmente **28 celdas**): construcción del dataset de trabajo, control de consistencia, agregación por año y tecnología, **ingeniería de variables** y síntesis previa a visualizaciones.
+
+**Tema y alcance (según el propio cuaderno):** análisis estratégico de la diversificación de la **matriz energética en Colombia (2020–2026)**, con foco en **FNCER (fuentes no convencionales renovables) frente a generación hídrica**, comparando trayectorias de solar, eólica, geotérmica e hídrica en generación, costos, emisiones, participación y diversificación. La fuente declarada en el notebook es un **modelo de datos sintético inspirado en tendencias** de referentes sectoriales (p. ej. XM, UPME, SGC); las conclusiones deben interpretarse en ese marco hasta conectar con datos operativos reales.
+
+**Flujo metodológico resumido en el notebook:**
+
+1. Librerías y configuración visual.  
+2. Construcción del dataset (periodo y variables para generación, demanda, cobertura, costos, inversión, emisiones por tecnología).  
+3. Revisión inicial: estructura, tipos, faltantes, rangos y coherencia entre magnitudes.  
+4. Base analítica agregada por **año × tipo de energía**.  
+5. Indicadores derivados (entre otros): participación relativa en generación, crecimiento interanual, variación absoluta de generación, costo por unidad generada, intensidad de emisiones, índice de ecoeficiencia, emisiones evitadas vs. referencia, índice de diversificación de la matriz.  
+6. Síntesis ejecutiva preliminar y bloques de visualización analítica.
+
+**Copia publicada (Google Drive / entorno Colab):** puedes abrir o descargar el cuaderno desde [este enlace](https://drive.google.com/file/d/1kWZn9wSRqu6PjTfnsmNb98mSBqC7-J6w/view?usp=drive_link) (`Transicion_Energetica.ipynb`). Para máxima reproducibilidad, prioriza la versión versionada en `notebook/` del repositorio y alinea entorno (versiones de librerías) con la que usó el equipo.
+
+**Ejecución local del `.ipynb`:** con un entorno Python (idealmente el mismo virtualenv del proyecto), instala dependencias del cuaderno si el propio notebook las declara o añade a `requirements.txt` según imports; luego `jupyter lab` o VS Code/Cursor con extensión Jupyter.
 
 ---
 
@@ -112,13 +135,13 @@ El tema general de la app se configura en `.streamlit/config.toml`.
 
 No como lista de plantilla sino como línea de trabajo coherente con lo que ya está versionado:
 
-1. **Negocio y alcance:** fijar qué decisiones apoya el tablero (exploración vs. scoring predictivo); hoy el foco es **EDA y comunicación** con base lista para modelado.  
-2. **Datos:** inventariar tablas y relaciones en el `.sql` de esquema; validar PK/FK y cobertura temporal; ejecutar y documentar hallazgos vía `Consultas_Analisis_*.sql`.  
-3. **Preparación y calidad:** limpieza, tipos, duplicados, reglas (p. ej. disponibilidad en rango, capacidades positivas); agregaciones en SQL o en pandas según capa.  
-4. **Análisis y posible modelado:** usar `Fact_Generacion` para series, `Fact_Costos` + dimensiones para regresión o clustering; entrenar **fuera** de Streamlit y, si aplica, exponer solo resultados validados en la app.  
-5. **Evaluación:** con modelos, partición temporal para series; métricas adecuadas (MAE/RMSE, etc.) y revisión de residuales; sin modelos, validación por **coherencia de negocio** y reproducibilidad de queries.  
-6. **Producto y despliegue:** Streamlit + `requirements.txt` + ruta en Community Cloud; en evolución, `secrets` para credenciales MySQL.  
-7. **Mantenimiento:** versiones fijadas en dependencias, contratos de esquema entre SQL y columnas consumidas por la app, monitoreo de deriva cuando exista ETL.
+1. **Negocio y alcance:** fijar qué decisiones apoya cada entregable (cuaderno = narrativa e indicadores; SQL = persistencia reproducible; Streamlit = exploración rápida para stakeholders).  
+2. **Datos:** inventariar tablas en el `.sql` de esquema; validar PK/FK; complementar con el flujo del **notebook** y con `Consultas_Analisis_*.sql` para consultas estándar.  
+3. **Preparación y calidad:** controles como en el notebook (estructura, faltantes, rangos) y reglas en capa SQL; agregaciones coherentes entre pandas y consultas.  
+4. **Análisis y posible modelado:** series en `Fact_Generacion`, economía en `Fact_Costos`, indicadores derivados como en el cuaderno; modelos, si aplica, **fuera** de Streamlit.  
+5. **Evaluación:** partición temporal donde haya serie; sin modelos predictivos, auditabilidad de métricas y trazabilidad notebook → SQL → dashboard.  
+6. **Producto y despliegue:** notebook (local o [Drive](https://drive.google.com/file/d/1kWZn9wSRqu6PjTfnsmNb98mSBqC7-J6w/view?usp=drive_link)), Streamlit en Community Cloud, MySQL en Workbench.  
+7. **Mantenimiento:** versionado de `requirements.txt`, del `.ipynb` y del esquema SQL; alinear definiciones de KPI entre capas.
 
 ---
 
@@ -140,7 +163,7 @@ Repositorio en GitHub; en [Streamlit](https://streamlit.io/) → Community Cloud
 
 ## ✅ Reproducibilidad
 
-Versionado de paquetes, mismo orden de ejecución de scripts SQL, y si se incorporan modelos estocásticos fijar semillas y registrar resultados (notebook o carpeta `experiments/` en evolución). No commitear secretos; usar `secrets.toml` solo en despliegue local/cloud.
+Versionado de paquetes, del cuaderno en `notebook/` y de los scripts SQL; con modelos estocásticos, fijar semillas y registrar resultados. No commitear secretos; usar `secrets.toml` solo en despliegue local/cloud.
 
 ---
 
@@ -149,7 +172,7 @@ Versionado de paquetes, mismo orden de ejecución de scripts SQL, y si se incorp
 - Conectar la app a MySQL y eliminar o reducir mocks manteniendo contratos de datos.  
 - Incorporar vistas de **generación** e **impacto ambiental** ya presentes en el esquema.  
 - Tests de calidad de datos y pipelines de actualización.  
-- Notebooks o scripts de experimentación con línea base y métricas auditables.
+- **Sincronizar** indicadores del `Transicion_Energetica.ipynb` con columnas/vistas consumidas por Streamlit para una sola fuente de verdad.
 
 ---
 
