@@ -487,31 +487,72 @@ def _view_proyectos(d: dict[str, pd.DataFrame]) -> None:
 
 def _view_costos(d: dict[str, pd.DataFrame]) -> None:
     proyectos = d["proyectos"]
-    costos = d["costos"].merge(proyectos[["id_proyecto", "nombre"]], on="id_proyecto", how="left")
+    tipo = d["tipo_energia"]
+    costos = (
+        d["costos"]
+        .merge(proyectos[["id_proyecto", "nombre", "id_tipo"]], on="id_proyecto", how="left")
+        .merge(tipo[["id_tipo_energia", "fuente"]], left_on="id_tipo", right_on="id_tipo_energia", how="left")
+    )
 
     palette = ["#0284c7", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#14b8a6"]
+
+    st.markdown("### Filtros")
+    f1, f2, f3, f4 = st.columns([1.2, 2.2, 1.0, 1.4])
+    with f1:
+        anios = sorted(costos["anio"].dropna().unique().tolist())
+        anio_sel = st.selectbox("Año", anios, index=len(anios) - 1 if anios else 0)
+    with f2:
+        tipo_options = ["Todos"] + sorted(tipo["fuente"].dropna().unique().tolist())
+        tipo_sel = st.selectbox("Tipo de energía", tipo_options, index=0)
+    with f3:
+        metric_sel = st.selectbox("Métrica", ["LCOE", "CAPEX"], index=0)
+    with f4:
+        order_sel = st.selectbox("Orden", ["Desc", "Asc"], index=0)
+
+    costos_f = costos.copy()
+    if anios:
+        costos_f = costos_f[costos_f["anio"] == anio_sel]
+    if tipo_sel != "Todos":
+        costos_f = costos_f[costos_f["fuente"] == tipo_sel]
+
+    proyectos_disponibles = costos_f["nombre"].dropna().unique().tolist()
+    proyectos_disponibles = sorted(proyectos_disponibles)
+    proyectos_sel = st.multiselect(
+        "Proyectos",
+        options=proyectos_disponibles,
+        default=proyectos_disponibles,
+        help="Selecciona uno o varios proyectos. Las gráficas y la tabla se recalculan en tiempo real.",
+    )
+    if proyectos_sel:
+        costos_f = costos_f[costos_f["nombre"].isin(proyectos_sel)]
+    else:
+        costos_f = costos_f.iloc[0:0]
+
+    # Orden para mejorar lectura (igual para chart y tabla)
+    sort_col = "lcoe_usd_mwh" if metric_sel == "LCOE" else "capex_musd"
+    costos_f = costos_f.sort_values(sort_col, ascending=(order_sel == "Asc"))
 
     st.markdown("### Gráficas")
     col1, col2 = st.columns(2)
     with col1:
         chart = (
-            alt.Chart(costos)
+            alt.Chart(costos_f)
             .mark_bar()
             .encode(
-                x=alt.X("nombre:N", title=None),
+                x=alt.X("nombre:N", title=None, sort=costos_f["nombre"].tolist()),
                 y=alt.Y("lcoe_usd_mwh:Q", title="USD/MWh"),
                 color=alt.Color("nombre:N", legend=None, scale=alt.Scale(range=palette)),
                 tooltip=["nombre:N", alt.Tooltip("lcoe_usd_mwh:Q", title="LCOE")],
             )
-            .properties(height=320, title="📊 LCOE comparativo 2024")
+            .properties(height=320, title=f"📊 LCOE comparativo {anio_sel}")
         )
         st.altair_chart(chart, use_container_width=True)
     with col2:
         chart = (
-            alt.Chart(costos)
+            alt.Chart(costos_f)
             .mark_bar()
             .encode(
-                x=alt.X("nombre:N", title=None),
+                x=alt.X("nombre:N", title=None, sort=costos_f["nombre"].tolist()),
                 y=alt.Y("capex_musd:Q", title="M USD"),
                 color=alt.Color("nombre:N", legend=None, scale=alt.Scale(range=palette)),
                 tooltip=["nombre:N", alt.Tooltip("capex_musd:Q", title="CAPEX (M USD)")],
@@ -521,12 +562,13 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
         st.altair_chart(chart, use_container_width=True)
 
     st.markdown("### Tabla")
-    costos_tbl = costos.copy()
+    costos_tbl = costos_f.copy()
     costos_tbl["costo_total_musd"] = costos_tbl["capex_musd"] + costos_tbl["opex_musd"]
     st.dataframe(
-        costos_tbl[["nombre", "anio", "lcoe_usd_mwh", "capex_musd", "opex_musd", "costo_total_musd"]].rename(
+        costos_tbl[["nombre", "fuente", "anio", "lcoe_usd_mwh", "capex_musd", "opex_musd", "costo_total_musd"]].rename(
             columns={
                 "nombre": "Proyecto",
+                "fuente": "Tipo",
                 "anio": "Año",
                 "lcoe_usd_mwh": "LCOE (USD/MWh)",
                 "capex_musd": "CAPEX (M USD)",
