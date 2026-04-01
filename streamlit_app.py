@@ -58,6 +58,8 @@ def _inject_global_css() -> None:
             background-color: var(--color-box-bg) !important;
             color: var(--color-accent-main) !important;
             box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light) !important;
+            outline: 2px solid rgba(0, 107, 63, 0.22) !important;
+            outline-offset: -2px !important;
           }
 
           /* Ajuste de contenedor principal para parecer "container mx-auto px-6" */
@@ -179,14 +181,24 @@ def _top_nav(current_view: str) -> str:
         ("consultas", "Consultas", "🔎"),
     ]
 
+    def _set_view(vid: str) -> None:
+        st.session_state["view"] = vid
+        st.rerun()
+
     cols = st.columns(len(nav_items), gap="small")
-    new_view = current_view
     for i, (vid, label, icon) in enumerate(nav_items):
         with cols[i]:
             is_active = current_view == vid
-            if st.button(f"{icon} {label}", key=f"nav_{vid}", type="primary" if is_active else "secondary", use_container_width=True):
-                new_view = vid
-    return new_view
+            st.button(
+                f"{icon} {label}",
+                key=f"nav_{vid}",
+                type="primary" if is_active else "secondary",
+                use_container_width=True,
+                on_click=_set_view,
+                args=(vid,),
+            )
+
+    return st.session_state.get("view", current_view)
 
 
 def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
@@ -707,8 +719,7 @@ def main() -> None:
         st.session_state["view"] = "dashboard"
 
     _page_header("EnergyTrans Colombia")
-    st.session_state["view"] = _top_nav(st.session_state["view"])
-    view = st.session_state["view"]
+    view = _top_nav(st.session_state["view"])
 
     if view == "dashboard":
         _view_dashboard(d)
