@@ -2,6 +2,17 @@
 
 Esta carpeta contiene la versión compatible con **Streamlit** de la app originalmente ubicada en `energytrans-colombia/` (React + Vite).
 
+## Contexto académico
+
+Este proyecto fue realizado para el **curso de Análisis de Datos Integrador** de **Talento Tech**.
+
+## Integrantes
+
+- Claudia Arroyave
+- Michely Muñoz
+- Jesus Garcia
+- Maria Alejandra Colorado Ríos
+
 ## Ejecutar local (opcional)
 
 1. Crear entorno e instalar dependencias:
