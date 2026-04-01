@@ -599,34 +599,42 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
 
 def _view_cobertura(d: dict[str, pd.DataFrame]) -> None:
     proyectos = d["proyectos"]
+    tipo = d["tipo_energia"]
     regulacion = d["regulacion"]
-    cobertura = d["cobertura"].merge(proyectos[["id_proyecto", "nombre"]], on="id_proyecto", how="left")
+    cobertura = (
+        d["cobertura"]
+        .merge(proyectos[["id_proyecto", "nombre", "id_tipo"]], on="id_proyecto", how="left")
+        .merge(tipo[["id_tipo_energia", "fuente"]], left_on="id_tipo", right_on="id_tipo_energia", how="left")
+    )
+    cobertura["fuente"] = cobertura["fuente"].astype(str).str.strip()
 
     st.markdown("### Gráficas")
     col1, col2 = st.columns(2)
     with col1:
         chart = (
             alt.Chart(cobertura)
-            .mark_bar(color="#0284c7")
+            .mark_bar()
             .encode(
                 x=alt.X("nombre:N", title=None),
                 y=alt.Y("usuarios:Q", title="Usuarios"),
-                tooltip=["nombre:N", alt.Tooltip("usuarios:Q", title="Usuarios")],
+                color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale(), sort=ENERGY_COLOR_DOMAIN),
+                tooltip=["nombre:N", "fuente:N", alt.Tooltip("usuarios:Q", title="Usuarios")],
             )
-            .properties(height=320, title="Usuarios por proyecto")
+            .properties(height=320, title="👥 Usuarios por proyecto")
         )
         st.altair_chart(chart, use_container_width=True)
     with col2:
-        chart = (
-            alt.Chart(cobertura)
-            .mark_line(point=alt.OverlayMarkDef(color="#166534"))
-            .encode(
-                x=alt.X("nombre:N", title=None),
-                y=alt.Y("disponibilidad_pct:Q", title="Disponibilidad (%)", scale=alt.Scale(domain=[95, 100])),
-                tooltip=["nombre:N", alt.Tooltip("disponibilidad_pct:Q", title="Disponibilidad (%)")],
-            )
-            .properties(height=320, title="Disponibilidad (%)")
+        base = alt.Chart(cobertura).encode(
+            x=alt.X("nombre:N", title=None),
+            y=alt.Y("disponibilidad_pct:Q", title="Disponibilidad (%)", scale=alt.Scale(domain=[95, 100])),
         )
+        chart = alt.layer(
+            base.mark_line(color="#006b3f", opacity=0.65),
+            base.mark_point(filled=True, size=80).encode(
+                color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale(), sort=ENERGY_COLOR_DOMAIN),
+                tooltip=["nombre:N", "fuente:N", alt.Tooltip("disponibilidad_pct:Q", title="Disponibilidad (%)")],
+            ),
+        ).properties(height=320, title="✅ Disponibilidad (%)")
         st.altair_chart(chart, use_container_width=True)
 
     st.markdown("### Tabla")
