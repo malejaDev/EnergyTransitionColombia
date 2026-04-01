@@ -1,0 +1,526 @@
+from __future__ import annotations
+
+import altair as alt
+import pandas as pd
+import streamlit as st
+
+
+def _load_data() -> dict[str, pd.DataFrame]:
+    regulacion = pd.DataFrame(
+        [
+            {"id_regulacion": 1, "ley": "Ley 1715", "incentivo": "Deducción Renta 50%", "pct_ahorro": 50.0},
+            {"id_regulacion": 2, "ley": "Ley 2099", "incentivo": "Exclusión IVA Bienes/Servicios", "pct_ahorro": 19.0},
+        ]
+    )
+
+    tipo_energia = pd.DataFrame(
+        [
+            {"id_tipo_energia": 1, "fuente": "Hidráulica", "es_convencional": 1, "descripcion": "Embalses y Filo de agua"},
+            {"id_tipo_energia": 2, "fuente": "Solar", "es_convencional": 0, "descripcion": "Fotovoltaica Utility Scale"},
+            {"id_tipo_energia": 3, "fuente": "Eólica", "es_convencional": 0, "descripcion": "Aerogeneradores Onshore"},
+            {"id_tipo_energia": 4, "fuente": "Geotérmica", "es_convencional": 0, "descripcion": "Vapor de alta entalpía"},
+        ]
+    )
+
+    proyectos = pd.DataFrame(
+        [
+            {"id_proyecto": 101, "nombre": "Hidroituango", "depto": "Antioquia", "id_tipo": 1, "capacidad_mw": 2400},
+            {"id_proyecto": 102, "nombre": "Guavio", "depto": "Cundinamarca", "id_tipo": 1, "capacidad_mw": 1213},
+            {"id_proyecto": 201, "nombre": "La Loma", "depto": "Cesar", "id_tipo": 2, "capacidad_mw": 187},
+            {"id_proyecto": 202, "nombre": "Celsia Solar", "depto": "Tolima", "id_tipo": 2, "capacidad_mw": 80},
+            {"id_proyecto": 301, "nombre": "Guajira I", "depto": "La Guajira", "id_tipo": 3, "capacidad_mw": 20},
+            {"id_proyecto": 302, "nombre": "Alpha Wind", "depto": "La Guajira", "id_tipo": 3, "capacidad_mw": 504},
+            {"id_proyecto": 401, "nombre": "Nereidas", "depto": "Caldas", "id_tipo": 4, "capacidad_mw": 50},
+        ]
+    )
+
+    costos = pd.DataFrame(
+        [
+            {"id_proyecto": 101, "anio": 2024, "lcoe_usd_mwh": 47.54, "capex_musd": 2640.0, "opex_musd": 72.0},
+            {"id_proyecto": 102, "anio": 2024, "lcoe_usd_mwh": 44.71, "capex_musd": 1334.3, "opex_musd": 36.39},
+            {"id_proyecto": 201, "anio": 2024, "lcoe_usd_mwh": 68.64, "capex_musd": 205.7, "opex_musd": 5.61},
+            {"id_proyecto": 202, "anio": 2024, "lcoe_usd_mwh": 71.79, "capex_musd": 88.0, "opex_musd": 2.4},
+            {"id_proyecto": 301, "anio": 2024, "lcoe_usd_mwh": 41.42, "capex_musd": 22.0, "opex_musd": 0.6},
+            {"id_proyecto": 302, "anio": 2024, "lcoe_usd_mwh": 82.13, "capex_musd": 554.4, "opex_musd": 15.12},
+            {"id_proyecto": 401, "anio": 2024, "lcoe_usd_mwh": 42.34, "capex_musd": 55.0, "opex_musd": 1.5},
+        ]
+    )
+
+    cobertura = pd.DataFrame(
+        [
+            {"id_proyecto": 101, "id_reg": 2, "usuarios": 1080000, "disponibilidad_pct": 98.5},
+            {"id_proyecto": 102, "id_reg": 2, "usuarios": 545850, "disponibilidad_pct": 98.5},
+            {"id_proyecto": 201, "id_reg": 1, "usuarios": 84150, "disponibilidad_pct": 98.5},
+            {"id_proyecto": 202, "id_reg": 1, "usuarios": 36000, "disponibilidad_pct": 98.5},
+            {"id_proyecto": 301, "id_reg": 1, "usuarios": 9000, "disponibilidad_pct": 98.5},
+            {"id_proyecto": 302, "id_reg": 1, "usuarios": 226800, "disponibilidad_pct": 98.5},
+            {"id_proyecto": 401, "id_reg": 1, "usuarios": 22500, "disponibilidad_pct": 98.5},
+        ]
+    )
+
+    return {
+        "regulacion": regulacion,
+        "tipo_energia": tipo_energia,
+        "proyectos": proyectos,
+        "costos": costos,
+        "cobertura": cobertura,
+    }
+
+
+@st.cache_data(show_spinner=False)
+def _get_data() -> dict[str, pd.DataFrame]:
+    return _load_data()
+
+
+def _format_currency_es_co(amount: float, digits: int = 2) -> str:
+    return f"${amount:,.{digits}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _page_header(title: str, subtitle: str = "Transición Energética 2019-2025") -> None:
+    st.markdown(
+        """
+        <style>
+          .et-title { font-weight: 800; letter-spacing: -0.02em; }
+          .et-subtitle { color: rgba(15, 23, 42, 0.70); margin-top: -0.25rem; }
+          .et-card {
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 16px;
+            padding: 16px 18px;
+            background: #fff;
+            box-shadow: 0 10px 30px rgba(2, 8, 23, 0.06);
+          }
+          .et-chip {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(2, 132, 199, 0.10);
+            color: rgb(2, 132, 199);
+            font-weight: 650;
+            font-size: 12px;
+          }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(f"<div class='et-title' style='font-size: 28px;'>⚡ {title}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='et-subtitle'>{subtitle}</div>", unsafe_allow_html=True)
+
+
+def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
+    proyectos = d["proyectos"]
+    costos = d["costos"]
+    tipo = d["tipo_energia"]
+    cobertura = d["cobertura"]
+
+    capacidad_total = float(proyectos["capacidad_mw"].sum())
+    inversion_total = float(costos["capex_musd"].sum())
+    usuarios_total = int(cobertura["usuarios"].sum())
+    lcoe_promedio = float(costos["lcoe_usd_mwh"].mean())
+
+    st.markdown("### Resumen")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Proyectos activos", int(len(proyectos)), "↑ 25% vs 2019")
+    c2.metric("Capacidad total (GW)", f"{capacidad_total/1000:.1f}", "↑ 15% renovable")
+    c3.metric("Inversión total (B USD)", f"{inversion_total/1000:.1f}", "↑ 40% privado")
+    c4, c5, c6 = st.columns(3)
+    c4.metric("Usuarios beneficiados", f"{usuarios_total/1_000_000:.1f}M", "98.5% disponibilidad")
+    c5.metric("LCOE promedio (USD/MWh)", f"{lcoe_promedio:.2f}", "↓ 12% vs 2019")
+    c6.metric("Energía renovable", "73%", "Meta 2025: 80%")
+
+    st.markdown("### Mix energético Colombia")
+    capacidad_por_tipo = (
+        proyectos.merge(tipo, left_on="id_tipo", right_on="id_tipo_energia", how="left")
+        .groupby("fuente", as_index=False)["capacidad_mw"]
+        .sum()
+        .rename(columns={"capacidad_mw": "capacidad_mw_total"})
+    )
+
+    lcoe_por_tipo = (
+        costos.merge(proyectos, on="id_proyecto", how="left")
+        .merge(tipo, left_on="id_tipo", right_on="id_tipo_energia", how="left")
+        .groupby("fuente", as_index=False)["lcoe_usd_mwh"]
+        .mean()
+        .rename(columns={"lcoe_usd_mwh": "lcoe_promedio"})
+    )
+
+    capex_opex = costos.merge(proyectos[["id_proyecto", "nombre"]], on="id_proyecto", how="left")[
+        ["nombre", "capex_musd", "opex_musd"]
+    ]
+
+    cobertura_proyecto = cobertura.merge(proyectos[["id_proyecto", "nombre"]], on="id_proyecto", how="left")[
+        ["nombre", "usuarios"]
+    ]
+
+    col_left, col_right = st.columns(2)
+    with col_left:
+        chart = (
+            alt.Chart(capacidad_por_tipo)
+            .mark_arc(innerRadius=60)
+            .encode(
+                theta=alt.Theta("capacidad_mw_total:Q", title="Capacidad (MW)"),
+                color=alt.Color("fuente:N", title="Tipo"),
+                tooltip=["fuente:N", alt.Tooltip("capacidad_mw_total:Q", title="Capacidad (MW)")],
+            )
+            .properties(height=320, title="Capacidad por tipo de energía")
+        )
+        st.altair_chart(chart, use_container_width=True)
+
+    with col_right:
+        chart = (
+            alt.Chart(lcoe_por_tipo)
+            .mark_bar()
+            .encode(
+                x=alt.X("fuente:N", title=None),
+                y=alt.Y("lcoe_promedio:Q", title="USD/MWh"),
+                color=alt.Color("fuente:N", legend=None),
+                tooltip=["fuente:N", alt.Tooltip("lcoe_promedio:Q", title="LCOE", format=".2f")],
+            )
+            .properties(height=320, title="LCOE por tecnología")
+        )
+        st.altair_chart(chart, use_container_width=True)
+
+    col_left, col_right = st.columns(2)
+    with col_left:
+        base = alt.Chart(capex_opex).encode(x=alt.X("nombre:N", title=None))
+        chart = (
+            alt.layer(
+                base.mark_bar(color="#0284c7").encode(y=alt.Y("capex_musd:Q", title="M USD"), tooltip=["nombre:N", "capex_musd:Q"]),
+                base.mark_bar(color="#f59e0b").encode(y=alt.Y("opex_musd:Q"), tooltip=["nombre:N", "opex_musd:Q"]),
+            )
+            .resolve_scale(y="shared")
+            .properties(height=320, title="Inversión CAPEX vs OPEX (por proyecto)")
+        )
+        st.altair_chart(chart, use_container_width=True)
+
+    with col_right:
+        chart = (
+            alt.Chart(cobertura_proyecto)
+            .mark_arc()
+            .encode(
+                theta=alt.Theta("usuarios:Q", title="Usuarios"),
+                color=alt.Color("nombre:N", title="Proyecto"),
+                tooltip=["nombre:N", alt.Tooltip("usuarios:Q", title="Usuarios")],
+            )
+            .properties(height=320, title="Cobertura (usuarios) por proyecto")
+        )
+        st.altair_chart(chart, use_container_width=True)
+
+    st.markdown("### Tipos de energía renovable")
+    st.dataframe(tipo[["fuente", "descripcion"]], use_container_width=True, hide_index=True)
+
+
+def _view_proyectos(d: dict[str, pd.DataFrame]) -> None:
+    proyectos = d["proyectos"].copy()
+    tipo = d["tipo_energia"]
+    costos = d["costos"]
+
+    st.markdown("### Filtros")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        tipo_options = {"Todos": None, **{row["fuente"]: int(row["id_tipo_energia"]) for _, row in tipo.iterrows()}}
+        tipo_label = st.selectbox("Filtrar por tipo", list(tipo_options.keys()), index=0)
+        filter_tipo = tipo_options[tipo_label]
+    with col2:
+        deptos = ["Todos"] + sorted(proyectos["depto"].unique().tolist())
+        filter_depto = st.selectbox("Filtrar por departamento", deptos, index=0)
+    with col3:
+        filter_min_cap = st.number_input("Capacidad mínima (MW)", min_value=0, value=0, step=10)
+
+    if filter_tipo is not None:
+        proyectos = proyectos[proyectos["id_tipo"] == filter_tipo]
+    if filter_depto != "Todos":
+        proyectos = proyectos[proyectos["depto"] == filter_depto]
+    if filter_min_cap > 0:
+        proyectos = proyectos[proyectos["capacidad_mw"] >= float(filter_min_cap)]
+
+    proyectos = proyectos.merge(tipo[["id_tipo_energia", "fuente"]], left_on="id_tipo", right_on="id_tipo_energia", how="left")
+    proyectos = proyectos.merge(costos[["id_proyecto", "lcoe_usd_mwh"]], on="id_proyecto", how="left")
+
+    st.markdown("### Resultados")
+    st.dataframe(
+        proyectos[["id_proyecto", "nombre", "depto", "fuente", "capacidad_mw", "lcoe_usd_mwh"]]
+        .rename(
+            columns={
+                "id_proyecto": "ID",
+                "nombre": "Proyecto",
+                "depto": "Departamento",
+                "fuente": "Tipo",
+                "capacidad_mw": "Capacidad (MW)",
+                "lcoe_usd_mwh": "LCOE (USD/MWh)",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+def _view_costos(d: dict[str, pd.DataFrame]) -> None:
+    proyectos = d["proyectos"]
+    costos = d["costos"].merge(proyectos[["id_proyecto", "nombre"]], on="id_proyecto", how="left")
+
+    st.markdown("### Gráficas")
+    col1, col2 = st.columns(2)
+    with col1:
+        chart = (
+            alt.Chart(costos)
+            .mark_bar(color="#0284c7")
+            .encode(
+                x=alt.X("nombre:N", title=None),
+                y=alt.Y("lcoe_usd_mwh:Q", title="USD/MWh"),
+                tooltip=["nombre:N", alt.Tooltip("lcoe_usd_mwh:Q", title="LCOE")],
+            )
+            .properties(height=320, title="LCOE comparativo 2024")
+        )
+        st.altair_chart(chart, use_container_width=True)
+    with col2:
+        chart = (
+            alt.Chart(costos)
+            .mark_bar(color="#0284c7")
+            .encode(
+                x=alt.X("nombre:N", title=None),
+                y=alt.Y("capex_musd:Q", title="M USD"),
+                tooltip=["nombre:N", alt.Tooltip("capex_musd:Q", title="CAPEX (M USD)")],
+            )
+            .properties(height=320, title="CAPEX por proyecto")
+        )
+        st.altair_chart(chart, use_container_width=True)
+
+    st.markdown("### Tabla")
+    costos_tbl = costos.copy()
+    costos_tbl["costo_total_musd"] = costos_tbl["capex_musd"] + costos_tbl["opex_musd"]
+    st.dataframe(
+        costos_tbl[["nombre", "anio", "lcoe_usd_mwh", "capex_musd", "opex_musd", "costo_total_musd"]].rename(
+            columns={
+                "nombre": "Proyecto",
+                "anio": "Año",
+                "lcoe_usd_mwh": "LCOE (USD/MWh)",
+                "capex_musd": "CAPEX (M USD)",
+                "opex_musd": "OPEX (M USD)",
+                "costo_total_musd": "Costo total (M USD)",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+def _view_cobertura(d: dict[str, pd.DataFrame]) -> None:
+    proyectos = d["proyectos"]
+    regulacion = d["regulacion"]
+    cobertura = d["cobertura"].merge(proyectos[["id_proyecto", "nombre"]], on="id_proyecto", how="left")
+
+    st.markdown("### Gráficas")
+    col1, col2 = st.columns(2)
+    with col1:
+        chart = (
+            alt.Chart(cobertura)
+            .mark_bar(color="#0284c7")
+            .encode(
+                x=alt.X("nombre:N", title=None),
+                y=alt.Y("usuarios:Q", title="Usuarios"),
+                tooltip=["nombre:N", alt.Tooltip("usuarios:Q", title="Usuarios")],
+            )
+            .properties(height=320, title="Usuarios por proyecto")
+        )
+        st.altair_chart(chart, use_container_width=True)
+    with col2:
+        chart = (
+            alt.Chart(cobertura)
+            .mark_line(point=alt.OverlayMarkDef(color="#166534"))
+            .encode(
+                x=alt.X("nombre:N", title=None),
+                y=alt.Y("disponibilidad_pct:Q", title="Disponibilidad (%)", scale=alt.Scale(domain=[95, 100])),
+                tooltip=["nombre:N", alt.Tooltip("disponibilidad_pct:Q", title="Disponibilidad (%)")],
+            )
+            .properties(height=320, title="Disponibilidad (%)")
+        )
+        st.altair_chart(chart, use_container_width=True)
+
+    st.markdown("### Tabla")
+    tabla = (
+        d["cobertura"]
+        .merge(proyectos[["id_proyecto", "nombre"]], on="id_proyecto", how="left")
+        .merge(regulacion[["id_regulacion", "ley"]], left_on="id_reg", right_on="id_regulacion", how="left")
+    )
+    st.dataframe(
+        tabla[["nombre", "ley", "usuarios", "disponibilidad_pct"]].rename(
+            columns={"nombre": "Proyecto", "ley": "Regulación", "usuarios": "Usuarios", "disponibilidad_pct": "Disponibilidad (%)"}
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+def _view_regulacion(d: dict[str, pd.DataFrame]) -> None:
+    regulacion = d["regulacion"].copy()
+    st.markdown("### Marco regulatorio")
+
+    for _, r in regulacion.iterrows():
+        st.markdown(
+            f"""
+            <div class="et-card" style="margin: 10px 0;">
+              <div style="display:flex; justify-content:space-between; gap:12px; align-items:center;">
+                <div>
+                  <div style="font-weight:800; font-size: 18px;">{r['ley']}</div>
+                  <div style="color: rgba(15, 23, 42, 0.70);">{r['incentivo']}</div>
+                </div>
+                <div class="et-chip">{r['pct_ahorro']}% Ahorro</div>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("### Impacto de incentivos")
+    chart = (
+        alt.Chart(regulacion)
+        .mark_arc(innerRadius=60)
+        .encode(
+            theta=alt.Theta("pct_ahorro:Q", title="% Ahorro"),
+            color=alt.Color("ley:N", title="Ley"),
+            tooltip=["ley:N", alt.Tooltip("pct_ahorro:Q", title="% Ahorro")],
+        )
+        .properties(height=340)
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+
+def _generate_query_string(query_type: str, query_energia: str | None, query_anio: int | None) -> str:
+    query = "SELECT "
+    if query_type == "capacidad":
+        query += "SUM(capacidad_mw) as capacidad_total FROM Dim_Proyecto"
+    elif query_type == "lcoe":
+        query += "AVG(lcoe_usd_mwh) as lcoe_promedio FROM Fact_Costos"
+    elif query_type == "inversion":
+        query += "SUM(capex_musd) as inversion_total FROM Fact_Costos"
+    elif query_type == "cobertura":
+        query += "depto, SUM(usuarios) as usuarios FROM Dim_Proyecto JOIN Fact_Cobertura"
+    elif query_type == "eficiencia":
+        query += "AVG(disponibilidad_pct) as disponibilidad FROM Fact_Cobertura"
+    if query_energia:
+        query += f" WHERE id_tipo = {query_energia}"
+        if query_anio is not None:
+            query += f" AND anio = {query_anio}"
+    else:
+        if query_anio is not None:
+            query += f" WHERE anio = {query_anio}"
+    return query + ";"
+
+
+def _execute_query_mock(d: dict[str, pd.DataFrame], query_type: str, query_energia: str | None) -> pd.DataFrame:
+    proyectos = d["proyectos"]
+    tipo = d["tipo_energia"]
+    costos = d["costos"]
+
+    if query_type == "capacidad":
+        df = proyectos.merge(tipo, left_on="id_tipo", right_on="id_tipo_energia", how="left")
+        if query_energia:
+            df = df[df["id_tipo"].astype(str) == query_energia]
+        out = df.groupby("fuente", as_index=False)["capacidad_mw"].sum().rename(columns={"fuente": "label", "capacidad_mw": "value"})
+        return out
+
+    if query_type == "lcoe":
+        df = costos.merge(proyectos, on="id_proyecto", how="left").merge(tipo, left_on="id_tipo", right_on="id_tipo_energia", how="left")
+        if query_energia:
+            df = df[df["id_tipo"].astype(str) == query_energia]
+        out = df.groupby("fuente", as_index=False)["lcoe_usd_mwh"].mean().rename(columns={"fuente": "label", "lcoe_usd_mwh": "value"})
+        return out
+
+    return pd.DataFrame([{"label": "Dato 1", "value": 100.0}, {"label": "Dato 2", "value": 200.0}])
+
+
+def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
+    st.markdown("### Constructor de consultas")
+
+    query_type = st.selectbox(
+        "Tipo de consulta",
+        options=[
+            ("capacidad", "Capacidad por tipo"),
+            ("lcoe", "LCOE promedio"),
+            ("inversion", "Inversión total"),
+            ("cobertura", "Cobertura por departamento"),
+            ("eficiencia", "Eficiencia operativa"),
+        ],
+        format_func=lambda x: x[1],
+    )[0]
+
+    tipo = d["tipo_energia"]
+    energia_options = {"Todos": None, **{row["fuente"]: str(int(row["id_tipo_energia"])) for _, row in tipo.iterrows()}}
+    energia_label = st.selectbox("Filtrar por tipo de energía", list(energia_options.keys()), index=0)
+    query_energia = energia_options[energia_label]
+
+    query_anio = st.selectbox("Año", [2024, 2023, 2022, 2021, 2020, 2019], index=0)
+
+    if st.button("🔍 Ejecutar consulta", type="primary", use_container_width=False):
+        st.session_state["consulta_result"] = _execute_query_mock(d, query_type=query_type, query_energia=query_energia)
+        st.session_state["consulta_sql"] = _generate_query_string(query_type, query_energia, query_anio)
+
+    result_df: pd.DataFrame | None = st.session_state.get("consulta_result")
+    sql: str | None = st.session_state.get("consulta_sql")
+
+    st.markdown("### Resultado")
+    if result_df is None or sql is None:
+        st.info("Los resultados de la consulta aparecerán aquí…")
+        return
+
+    st.code(sql, language="sql")
+    st.dataframe(result_df, use_container_width=True, hide_index=True)
+
+    chart = (
+        alt.Chart(result_df)
+        .mark_bar(color="#0284c7")
+        .encode(
+            x=alt.X("label:N", title=None),
+            y=alt.Y("value:Q", title="Valor"),
+            tooltip=["label:N", alt.Tooltip("value:Q", title="Valor")],
+        )
+        .properties(height=320, title="Visualización de resultados")
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+
+def main() -> None:
+    st.set_page_config(page_title="EnergyTrans Colombia", page_icon="⚡", layout="wide")
+    d = _get_data()
+
+    with st.sidebar:
+        st.markdown("## EnergyTrans Colombia")
+        st.caption("Transición Energética 2019-2025")
+        view = st.radio(
+            "Navegación",
+            options=[
+                ("dashboard", "Dashboard"),
+                ("proyectos", "Proyectos"),
+                ("costos", "Costos"),
+                ("cobertura", "Cobertura"),
+                ("regulacion", "Regulación"),
+                ("consultas", "Consultas"),
+            ],
+            format_func=lambda x: x[1],
+        )[0]
+        st.divider()
+        st.caption("Datos: Ministerio de Minas y Energía | UPME (mock)")
+
+    _page_header("EnergyTrans Colombia")
+
+    if view == "dashboard":
+        _view_dashboard(d)
+    elif view == "proyectos":
+        _view_proyectos(d)
+    elif view == "costos":
+        _view_costos(d)
+    elif view == "cobertura":
+        _view_cobertura(d)
+    elif view == "regulacion":
+        _view_regulacion(d)
+    elif view == "consultas":
+        _view_consultas(d)
+    else:
+        st.error("Vista no reconocida.")
+
+    st.divider()
+    st.caption("© 2024 EnergyTrans Colombia | Transición Energética 2019-2025")
+
+
+if __name__ == "__main__":
+    main()
