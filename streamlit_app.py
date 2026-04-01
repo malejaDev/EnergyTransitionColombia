@@ -5,8 +5,14 @@ import pandas as pd
 import streamlit as st
 
 
-ENERGY_COLOR_DOMAIN = ["Hidráulica", "Solar", "Eólica", "Geotérmica"]
-# Colores consistentes (similar a la intención del UI original)
+# Etiquetas con escapes Unicode para evitar problemas de encoding del archivo en Windows.
+# Mantienen tildes en runtime y permiten que el dominio del color haga match exacto.
+ENERGY_HIDRAULICA = "Hidr\u00e1ulica"
+ENERGY_SOLAR = "Solar"
+ENERGY_EOLICA = "E\u00f3lica"
+ENERGY_GEOTERMICA = "Geot\u00e9rmica"
+
+ENERGY_COLOR_DOMAIN = [ENERGY_HIDRAULICA, ENERGY_SOLAR, ENERGY_EOLICA, ENERGY_GEOTERMICA]
 ENERGY_COLOR_RANGE = ["#0284c7", "#f59e0b", "#10b981", "#ef4444"]  # azul, amarillo, verde/teal, rojo
 
 
@@ -97,10 +103,10 @@ def _load_data() -> dict[str, pd.DataFrame]:
 
     tipo_energia = pd.DataFrame(
         [
-            {"id_tipo_energia": 1, "fuente": "Hidráulica", "es_convencional": 1, "descripcion": "Embalses y Filo de agua"},
+            {"id_tipo_energia": 1, "fuente": ENERGY_HIDRAULICA, "es_convencional": 1, "descripcion": "Embalses y Filo de agua"},
             {"id_tipo_energia": 2, "fuente": "Solar", "es_convencional": 0, "descripcion": "Fotovoltaica Utility Scale"},
-            {"id_tipo_energia": 3, "fuente": "Eólica", "es_convencional": 0, "descripcion": "Aerogeneradores Onshore"},
-            {"id_tipo_energia": 4, "fuente": "Geotérmica", "es_convencional": 0, "descripcion": "Vapor de alta entalpía"},
+            {"id_tipo_energia": 3, "fuente": ENERGY_EOLICA, "es_convencional": 0, "descripcion": "Aerogeneradores Onshore"},
+            {"id_tipo_energia": 4, "fuente": ENERGY_GEOTERMICA, "es_convencional": 0, "descripcion": "Vapor de alta entalpía"},
         ]
     )
 
