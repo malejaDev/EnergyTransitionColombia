@@ -1,9 +1,13 @@
 # ⚡ EnergyTransitionColombia
 
-**EnergyTransitionColombia** articula tres capas: **análisis exploratorio y de ingeniería de variables en notebook** (`notebook/Transicion_Energetica.ipynb`), **persistencia y consultas analíticas en MySQL** (`database/`), y un **dashboard en Streamlit** para exploración operativa: proyectos por tecnología y región, costos (LCOE, CAPEX, OPEX), cobertura y disponibilidad, marco regulatorio, y en base de datos además **generación diaria** e **impacto ambiental**. La app publicada alimenta la interfaz con **datos mock en Python** coherentes con el modelo dimensional; la base SQL y el cuaderno son el lugar donde concentrar **trazabilidad, calidad de datos y narrativa analítica** antes o en paralelo al producto interactivo.
+El proyecto organiza el trabajo en **tres capas**: (1) **Notebook** — EDA e indicadores derivados en `notebook/Transicion_Energetica.ipynb`; (2) **MySQL** — esquema dimensional, datos y consultas reproducibles en `database/` (incluye generación diaria e impacto ambiental en tablas de hechos); (3) **Streamlit** — dashboard para filtrar y visualizar proyectos, costos (LCOE, CAPEX, OPEX), cobertura, disponibilidad y regulación.
 
-**App en producción:** [https://energytransitioncolombia.streamlit.app/](https://energytransitioncolombia.streamlit.app/)  
-**Entrada principal del código:** `EnergyTransitionColombia/streamlit_app.py`
+Hoy el **despliegue web** usa **datos mock en memoria** (`streamlit_app.py`) alineados al modelo; la **fuente analítica “fuerte”** sigue siendo el **SQL + el cuaderno** (calidad, trazabilidad y narrativa). Más abajo están el detalle de cada capa.
+
+| | |
+|---|--|
+| **App en producción** | [energytransitioncolombia.streamlit.app](https://energytransitioncolombia.streamlit.app/) |
+| **Entrada del dashboard** | `EnergyTransitionColombia/streamlit_app.py` |
 
 ---
 
