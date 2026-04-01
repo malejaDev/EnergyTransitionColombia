@@ -1,24 +1,59 @@
 # ⚡ EnergyTransitionColombia (Streamlit)
 
-Dashboard interactivo para explorar indicadores de **Transición Energética en Colombia (2019–2025)**: proyectos, costos (LCOE/CAPEX/OPEX), cobertura/disponibilidad y marco regulatorio.
+Producto de datos (**dashboard Streamlit**) construido sobre un **marco dimensional** y orientado a **preguntas cuantitativas** sobre la **Transición Energética en Colombia (2019–2025)**: proyectos, costos (LCOE/CAPEX/OPEX), cobertura/disponibilidad, generación temporal y marco regulatorio.
+
+Este documento describe el proyecto con enfoque de **ciencia de datos**: formulación del problema, datos, supuestos, limitaciones, reproducibilidad y líneas de trabajo **más allá del EDA** (modelado y evaluación).
 
 ## 🌐 App online (Streamlit)
 
 - **URL**: `https://energytransitioncolombia.streamlit.app/`
 - **Archivo principal**: `EnergyTransitionColombia/streamlit_app.py`
 
-## 🎯 Objetivo
+## 🎯 Objetivo (ciencia de datos + producto)
 
-- Consolidar y visualizar métricas clave de la transición energética.
-- Facilitar comparación entre **tecnologías** (Hidráulica, Solar, Eólica, Geotérmica) con un estándar de color consistente.
-- Permitir exploración con filtros y vistas temáticas (costos, cobertura, regulación, etc.).
+- **Formular y explorar** relaciones observables entre tecnología, capacidad, costos y cobertura (EDA sistemático).
+- **Reducir incertidumbre operativa** del usuario final mediante filtros, agregaciones y visualizaciones coherentes.
+- **Estandarizar** la semántica de variables y la representación visual (evitar interpretaciones erróneas por colores inconsistentes).
+- **Dejar trazabilidad** entre capa de datos (SQL), transformaciones y capa de presentación (Streamlit).
 
-## 🧩 Alcance del análisis (qué responde este proyecto)
+## 🔬 Enfoque de científico de datos
+
+### Pregunta guía
+
+> ¿Cómo se compone la matriz energética en el escenario considerado y **qué patrones** emergen al cruzar **tecnología**, **escala (MW)**, **costos** y **cobertura/disponibilidad**?
+
+### Hipótesis exploratorias (no confirmatorias hasta tener datos oficiales)
+
+Con datos **representativos y limpios**, sería razonable contrastar en el tablero (y luego con modelos):
+
+- Proyectos de **mayor capacidad** no necesariamente implican **menor LCOE** (economías de escala vs. heterogeneidad regional y tecnológica).
+- **Tecnologías** con curvas de costo distintas deberían agruparse de forma estable en comparativas (CAPEX vs. LCOE).
+- Indicadores de **cobertura/disponibilidad** deben interpretarse **condicionados al contexto regulatorio** y al portafolio de proyectos.
+
+Estas hipótesis aquí son **exploratorias**: la versión actual de la app usa **mock** en Python; al conectar la base `MatrizEnergeticaCol` y validar calidad de datos, pasan a ser **contrastables** con inferencia y/o modelos.
+
+### Supuestos y límites de inferencia
+
+- **Correlación ≠ causalidad**: el dashboard facilita asociaciones; afirmaciones causales requieren diseño (variables de confusión, series temporales, instrumentos, etc.).
+- **Representatividad**: con mock/académico, las conclusiones son **sobre el pipeline y la metodología**, no sobre el sistema eléctrico real.
+- **Sesgos típicos**: selección de proyectos, años parciales, definiciones de LCOE/CAPEX no homogéneas entre fuentes, y agregaciones que ocultan heterogeneidad intra-región.
+
+### Oportunidades de modelado (siguiente capa)
+
+| Tarea | Idea | Datos útiles | Métrica típica |
+|------|------|--------------|----------------|
+| Regresión | Explicar/predicción de **LCOE** con capacidad, tecnología, región | `Fact_Costos` + `Dim_Proyecto` + features categóricas | MAE/RMSE, \(R^2\), residuales |
+| Clasificación | Clasificar proyectos por “banda” de costo o eficiencia | Costos + capacidad + tipo | F1, AUC (si binario) |
+| Series temporales | Pronóstico de **generación** o factor de planta | `Fact_Generacion` (`fecha`) | MAE/RMSE, valores fuera de muestra |
+| Agrupamiento | Segmentar proyectos por perfil económico-operativo | Costos + cobertura + disponibilidad | Silhouette, estabilidad de clusters |
+
+## 🧩 Alcance del dominio (qué cubre el producto de datos)
 
 - **Evolución y composición** de la capacidad instalada por tecnología.
 - **Comparación económica** entre proyectos (LCOE, CAPEX, OPEX) y su lectura por tecnología.
 - **Cobertura** (usuarios beneficiados) y **disponibilidad** operacional por proyecto.
 - **Marco regulatorio** e incentivos (impacto porcentual).
+- **Generación diaria y agregaciones temporales** (capa SQL en `database/`; la app puede consumirlas en iteraciones futuras).
 
 ## 🧑‍🤝‍🧑 Integrantes
 
@@ -119,6 +154,14 @@ SOURCE EnergyTransitionColombia/database/Consultas_Analisis_Matriz_Energetica_Co
    - Reglas básicas (disponibilidad 0–100, capacidades > 0, etc.)
 4. **Capa semántica/KPIs**: vistas o queries que calculen KPIs (por tecnología, por proyecto, por periodo).
 5. **Consumo (Streamlit)**: lectura desde MySQL (p. ej., SQLAlchemy) y render de vistas.
+6. **Experimentación (DS)**: versionar conjuntos de entrenamiento/prueba, definir *baseline* (al menos un modelo simple vs. complejo) y documentar decisiones.
+7. **Evaluación y despliegue**: métricas en validación, pruebas de regresión del tablero (datos nuevos no deben romper joins/KPIs).
+
+### Validación (cuando exista modelado)
+
+- **Partición temporal** obligatoria si se usan series (`Fact_Generacion`): entrenar con ventanas pasadas y evaluar en fechas futuras.
+- **Estratificación** por tecnología o región si hay desbalance.
+- **Análisis de residuales** en regresión; curvas de calibración si hay probabilidades.
 
 ## 🧭 Navegación (módulos)
 
@@ -151,6 +194,8 @@ streamlit run EnergyTransitionColombia/streamlit_app.py
 - **Python**: instala dependencias desde `EnergyTransitionColombia/requirements.txt`.
 - **SQL**: ejecuta los scripts en MySQL Workbench (sección “Base de datos”).
 - **Entorno**: evita subir secretos; Streamlit ignora `secrets.toml` por seguridad.
+- **Versionado**: fija versiones en `requirements.txt` cuando el proyecto pase de demo a trabajo reproducible en equipo.
+- **Semillas**: si se añaden modelos estocásticos, fija `random_state` y documenta en notebook o `docs/`.
 
 ## 🚀 Despliegue (Streamlit Community Cloud)
 
@@ -170,6 +215,8 @@ streamlit run EnergyTransitionColombia/streamlit_app.py
 - Conectar la app a MySQL (lectura de `Dim_*` y `Fact_*`) y reemplazar mocks.
 - Agregar más años en costos/series y tendencias temporales.
 - Añadir validaciones automáticas de calidad (tests de datos) y reportes.
+- Incorporar **notebooks** o scripts (`experiments/`) con modelos baseline y métricas exportables.
+- Definir contrato de datos (**data contracts**) entre SQL y la app (schemas esperados por vista).
 
 ## 📄 Licencia
 
