@@ -5,6 +5,15 @@ import pandas as pd
 import streamlit as st
 
 
+ENERGY_COLOR_DOMAIN = ["Hidráulica", "Solar", "Eólica", "Geotérmica"]
+# Colores consistentes (similar a la intención del UI original)
+ENERGY_COLOR_RANGE = ["#0284c7", "#f59e0b", "#10b981", "#ef4444"]  # azul, amarillo, verde/teal, rojo
+
+
+def _energy_color_scale() -> alt.Scale:
+    return alt.Scale(domain=ENERGY_COLOR_DOMAIN, range=ENERGY_COLOR_RANGE)
+
+
 def _inject_global_css() -> None:
     st.markdown(
         """
@@ -294,7 +303,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             .mark_arc(innerRadius=60)
             .encode(
                 theta=alt.Theta("capacidad_mw_total:Q", title="Capacidad (MW)"),
-                color=alt.Color("fuente:N", title="Tipo"),
+                color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale()),
                 tooltip=["fuente:N", alt.Tooltip("capacidad_mw_total:Q", title="Capacidad (MW)")],
             )
             .properties(height=320, title="📊 Capacidad por tipo de energía")
@@ -308,7 +317,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             .encode(
                 x=alt.X("fuente:N", title=None),
                 y=alt.Y("lcoe_promedio:Q", title="USD/MWh"),
-                color=alt.Color("fuente:N", legend=None),
+                color=alt.Color("fuente:N", legend=None, scale=_energy_color_scale()),
                 tooltip=["fuente:N", alt.Tooltip("lcoe_promedio:Q", title="LCOE", format=".2f")],
             )
             .properties(height=320, title="💰 LCOE por tecnología")
@@ -494,8 +503,6 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
         .merge(tipo[["id_tipo_energia", "fuente"]], left_on="id_tipo", right_on="id_tipo_energia", how="left")
     )
 
-    palette = ["#0284c7", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#14b8a6"]
-
     st.markdown("### Filtros")
     f1, f2, f3, f4 = st.columns([1.2, 2.2, 1.0, 1.4])
     with f1:
@@ -541,8 +548,8 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
             .encode(
                 x=alt.X("nombre:N", title=None, sort=costos_f["nombre"].tolist()),
                 y=alt.Y("lcoe_usd_mwh:Q", title="USD/MWh"),
-                color=alt.Color("nombre:N", legend=None, scale=alt.Scale(range=palette)),
-                tooltip=["nombre:N", alt.Tooltip("lcoe_usd_mwh:Q", title="LCOE")],
+                color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale()),
+                tooltip=["nombre:N", "fuente:N", alt.Tooltip("lcoe_usd_mwh:Q", title="LCOE")],
             )
             .properties(height=320, title=f"📊 LCOE comparativo {anio_sel}")
         )
@@ -554,8 +561,8 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
             .encode(
                 x=alt.X("nombre:N", title=None, sort=costos_f["nombre"].tolist()),
                 y=alt.Y("capex_musd:Q", title="M USD"),
-                color=alt.Color("nombre:N", legend=None, scale=alt.Scale(range=palette)),
-                tooltip=["nombre:N", alt.Tooltip("capex_musd:Q", title="CAPEX (M USD)")],
+                color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale()),
+                tooltip=["nombre:N", "fuente:N", alt.Tooltip("capex_musd:Q", title="CAPEX (M USD)")],
             )
             .properties(height=320, title="💵 CAPEX por proyecto")
         )
@@ -748,10 +755,11 @@ def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
 
     chart = (
         alt.Chart(result_df)
-        .mark_bar(color="#0284c7")
+        .mark_bar()
         .encode(
             x=alt.X("label:N", title=None),
             y=alt.Y("value:Q", title="Valor"),
+            color=alt.Color("label:N", legend=None, scale=_energy_color_scale()),
             tooltip=["label:N", alt.Tooltip("value:Q", title="Valor")],
         )
         .properties(height=320, title="Visualización de resultados")
