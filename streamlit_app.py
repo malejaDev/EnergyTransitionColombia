@@ -233,6 +233,9 @@ def _view_inicio() -> None:
             proyectos, costos (LCOE/CAPEX/OPEX), cobertura y marco regulatorio. La app está diseñada para navegación rápida,
             comparaciones visuales y consultas exploratorias.
           </div>
+          <div style="margin-top: 10px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.5;">
+            Realizado para el <b>curso de Análisis de Datos Integrador</b> de <b>Talento Tech</b>.
+          </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -280,6 +283,22 @@ def _view_inicio() -> None:
             """,
             unsafe_allow_html=True,
         )
+
+    st.markdown("### Integrantes")
+    st.markdown(
+        """
+        <div class="neo-card" style="padding: 18px;">
+          <div style="font-weight: 900; color: var(--color-text-primary); margin-bottom: 10px;">👥 Equipo</div>
+          <div style="color: var(--color-text-secondary); font-size: 13px; line-height: 1.7;">
+            - Claudia Arroyave<br/>
+            - Michely Muñoz<br/>
+            - Jesus Garcia<br/>
+            - Maria Alejandra Colorado Ríos
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.markdown("### Guía rápida")
     g1, g2 = st.columns(2)
