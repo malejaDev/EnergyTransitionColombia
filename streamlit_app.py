@@ -396,6 +396,63 @@ def _view_proyectos(d: dict[str, pd.DataFrame]) -> None:
     proyectos = proyectos.merge(costos[["id_proyecto", "lcoe_usd_mwh"]], on="id_proyecto", how="left")
 
     st.markdown("### Resultados")
+
+    def _badge_color(fuente: str) -> tuple[str, str]:
+        mapping = {
+            "Hidráulica": ("#dcfce7", "#166534"),
+            "Solar": ("#d1fae5", "#065f46"),
+            "Eólica": ("#ccfbf1", "#0f766e"),
+            "Geotérmica": ("#cffafe", "#155e75"),
+        }
+        return mapping.get(fuente, ("#f3f4f6", "#111827"))
+
+    def _project_card(nombre: str, depto: str, fuente: str, capacidad_mw: float, lcoe: float | None) -> None:
+        bg, fg = _badge_color(fuente)
+        lcoe_txt = "N/A" if lcoe is None or pd.isna(lcoe) else f"${float(lcoe):.2f}"
+        st.markdown(
+            f"""
+            <div class="neo-card" style="padding: 18px;">
+              <div style="font-weight: 850; font-size: 18px; color: var(--color-text-primary); margin-bottom: 10px;">
+                {nombre}
+              </div>
+              <div style="color: var(--color-text-secondary); font-size: 13px; margin-bottom: 6px;">📍 {depto}</div>
+              <div style="color: var(--color-text-secondary); font-size: 13px; margin-bottom: 6px;">⚡ {fuente}</div>
+              <div style="color: var(--color-text-secondary); font-size: 13px; margin-bottom: 12px;">💰 LCOE: {lcoe_txt}</div>
+              <div style="display:flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
+                <span style="
+                  padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 750;
+                  background: {bg}; color: {fg}; border: 1px solid rgba(15,23,42,0.08);
+                ">{fuente}</span>
+                <span style="
+                  padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 750;
+                  background: #f3f4f6; color: #111827; border: 1px solid rgba(15,23,42,0.08);
+                ">{int(capacidad_mw)} MW</span>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    if len(proyectos) > 0:
+        per_row = 3
+        rows = (len(proyectos) + per_row - 1) // per_row
+        for r in range(rows):
+            cols = st.columns(per_row, gap="medium")
+            for c in range(per_row):
+                idx = r * per_row + c
+                if idx >= len(proyectos):
+                    break
+                row = proyectos.iloc[idx]
+                with cols[c]:
+                    _project_card(
+                        nombre=str(row["nombre"]),
+                        depto=str(row["depto"]),
+                        fuente=str(row["fuente"]) if not pd.isna(row["fuente"]) else "Desconocido",
+                        capacidad_mw=float(row["capacidad_mw"]),
+                        lcoe=None if pd.isna(row["lcoe_usd_mwh"]) else float(row["lcoe_usd_mwh"]),
+                    )
+        st.markdown("")
+
     st.dataframe(
         proyectos[["id_proyecto", "nombre", "depto", "fuente", "capacidad_mw", "lcoe_usd_mwh"]]
         .rename(
