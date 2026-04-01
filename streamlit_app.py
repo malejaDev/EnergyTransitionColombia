@@ -5,6 +5,73 @@ import pandas as pd
 import streamlit as st
 
 
+def _inject_global_css() -> None:
+    st.markdown(
+        """
+        <style>
+          :root{
+            --color-bg-primary: #f4f7f6;
+            --color-bg-secondary: #f4f7f6;
+            --color-text-primary: #111111;
+            --color-text-secondary: #4b5563;
+            --color-accent-main: #006b3f;
+            --color-accent-hover: #004d2d;
+            --color-box-bg: #f4f7f6;
+            --shadow-light: #ffffff;
+            --shadow-dark: #d1d9e6;
+          }
+
+          .stApp { background: var(--color-bg-primary); color: var(--color-text-primary); }
+          [data-testid="stHeader"] { background: transparent; }
+          [data-testid="stToolbar"] { right: 0.75rem; }
+
+          .neo-flat{
+            background-color: var(--color-box-bg);
+            border-radius: 1rem;
+            box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+          }
+          .neo-card{
+            background-color: var(--color-box-bg);
+            border-radius: 1.25rem;
+            box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+          }
+
+          /* Botones estilo "neo-btn" para navegación */
+          div[data-testid="stButton"] > button {
+            background-color: var(--color-box-bg) !important;
+            color: var(--color-text-secondary) !important;
+            border-radius: 0.75rem !important;
+            border: none !important;
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light) !important;
+            transition: all 0.2s ease-in-out;
+            padding: 0.55rem 0.9rem !important;
+            font-weight: 650 !important;
+          }
+          div[data-testid="stButton"] > button:hover {
+            color: var(--color-accent-main) !important;
+            box-shadow: 2px 2px 5px var(--shadow-dark), -2px -2px 5px var(--shadow-light) !important;
+          }
+
+          /* Botón "activo": lo renderizamos como primary, y lo reestilizamos */
+          div[data-testid="stButton"] > button[kind="primary"]{
+            background-color: var(--color-box-bg) !important;
+            color: var(--color-accent-main) !important;
+            box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light) !important;
+          }
+
+          /* Ajuste de contenedor principal para parecer "container mx-auto px-6" */
+          section.main > div.block-container{
+            padding-top: 1.25rem;
+            padding-bottom: 2.5rem;
+            max-width: 1200px;
+          }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _load_data() -> dict[str, pd.DataFrame]:
     regulacion = pd.DataFrame(
         [
@@ -78,32 +145,44 @@ def _format_currency_es_co(amount: float, digits: int = 2) -> str:
 
 def _page_header(title: str, subtitle: str = "Transición Energética 2019-2025") -> None:
     st.markdown(
-        """
-        <style>
-          .et-title { font-weight: 800; letter-spacing: -0.02em; }
-          .et-subtitle { color: rgba(15, 23, 42, 0.70); margin-top: -0.25rem; }
-          .et-card {
-            border: 1px solid rgba(15, 23, 42, 0.08);
-            border-radius: 16px;
-            padding: 16px 18px;
-            background: #fff;
-            box-shadow: 0 10px 30px rgba(2, 8, 23, 0.06);
-          }
-          .et-chip {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 999px;
-            background: rgba(2, 132, 199, 0.10);
-            color: rgb(2, 132, 199);
-            font-weight: 650;
-            font-size: 12px;
-          }
-        </style>
+        f"""
+        <div class="neo-flat" style="padding: 1rem 1.25rem; margin-bottom: 1.75rem;">
+          <div style="display:flex; align-items:center; gap: 0.9rem; flex-wrap: wrap;">
+            <div style="
+              width: 48px; height: 48px; border-radius: 0.9rem;
+              display:flex; align-items:center; justify-content:center;
+              background: var(--color-accent-main); color: white; font-weight: 800;">
+              ⚡
+            </div>
+            <div>
+              <div style="font-weight: 800; font-size: 1.25rem; color: var(--color-text-primary);">{title}</div>
+              <div style="font-size: 0.9rem; color: var(--color-text-secondary);">{subtitle}</div>
+            </div>
+          </div>
+        </div>
         """,
         unsafe_allow_html=True,
     )
-    st.markdown(f"<div class='et-title' style='font-size: 28px;'>⚡ {title}</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='et-subtitle'>{subtitle}</div>", unsafe_allow_html=True)
+
+
+def _top_nav(current_view: str) -> str:
+    nav_items: list[tuple[str, str, str]] = [
+        ("dashboard", "Dashboard", "📊"),
+        ("proyectos", "Proyectos", "🏗️"),
+        ("costos", "Costos", "💰"),
+        ("cobertura", "Cobertura", "📶"),
+        ("regulacion", "Regulación", "📄"),
+        ("consultas", "Consultas", "🔎"),
+    ]
+
+    cols = st.columns(len(nav_items), gap="small")
+    new_view = current_view
+    for i, (vid, label, icon) in enumerate(nav_items):
+        with cols[i]:
+            is_active = current_view == vid
+            if st.button(f"{icon} {label}", key=f"nav_{vid}", type="primary" if is_active else "secondary", use_container_width=True):
+                new_view = vid
+    return new_view
 
 
 def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
@@ -358,13 +437,16 @@ def _view_regulacion(d: dict[str, pd.DataFrame]) -> None:
     for _, r in regulacion.iterrows():
         st.markdown(
             f"""
-            <div class="et-card" style="margin: 10px 0;">
+            <div class="neo-card" style="margin: 10px 0; padding: 16px 18px;">
               <div style="display:flex; justify-content:space-between; gap:12px; align-items:center;">
                 <div>
                   <div style="font-weight:800; font-size: 18px;">{r['ley']}</div>
-                  <div style="color: rgba(15, 23, 42, 0.70);">{r['incentivo']}</div>
+                  <div style="color: var(--color-text-secondary);">{r['incentivo']}</div>
                 </div>
-                <div class="et-chip">{r['pct_ahorro']}% Ahorro</div>
+                <div style="
+                  display:inline-block; padding: 4px 10px; border-radius: 999px;
+                  background: rgba(0,107,63,0.10); color: var(--color-accent-main);
+                  font-weight: 650; font-size: 12px;">{r['pct_ahorro']}% Ahorro</div>
               </div>
             </div>
             """,
@@ -481,25 +563,14 @@ def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
 
 def main() -> None:
     st.set_page_config(page_title="EnergyTrans Colombia", page_icon="⚡", layout="wide")
+    _inject_global_css()
     d = _get_data()
 
-    with st.sidebar:
-        st.markdown("## EnergyTrans Colombia")
-        st.caption("Transición Energética 2019-2025")
-        view = st.radio(
-            "Navegación",
-            options=[
-                ("dashboard", "Dashboard"),
-                ("proyectos", "Proyectos"),
-                ("costos", "Costos"),
-                ("cobertura", "Cobertura"),
-                ("regulacion", "Regulación"),
-                ("consultas", "Consultas"),
-            ],
-            format_func=lambda x: x[1],
-        )[0]
-        st.divider()
-        st.caption("Datos: Ministerio de Minas y Energía | UPME (mock)")
+    if "view" not in st.session_state:
+        st.session_state["view"] = "dashboard"
+
+    st.session_state["view"] = _top_nav(st.session_state["view"])
+    view = st.session_state["view"]
 
     _page_header("EnergyTrans Colombia")
 
