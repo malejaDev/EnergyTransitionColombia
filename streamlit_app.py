@@ -279,6 +279,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
         .sum()
         .rename(columns={"capacidad_mw": "capacidad_mw_total"})
     )
+    capacidad_por_tipo["fuente"] = capacidad_por_tipo["fuente"].astype(str).str.strip()
 
     lcoe_por_tipo = (
         costos.merge(proyectos, on="id_proyecto", how="left")
@@ -287,6 +288,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
         .mean()
         .rename(columns={"lcoe_usd_mwh": "lcoe_promedio"})
     )
+    lcoe_por_tipo["fuente"] = lcoe_por_tipo["fuente"].astype(str).str.strip()
 
     capex_opex = costos.merge(proyectos[["id_proyecto", "nombre"]], on="id_proyecto", how="left")[
         ["nombre", "capex_musd", "opex_musd"]
@@ -303,7 +305,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             .mark_arc(innerRadius=60)
             .encode(
                 theta=alt.Theta("capacidad_mw_total:Q", title="Capacidad (MW)"),
-                color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale()),
+                color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale(), sort=ENERGY_COLOR_DOMAIN),
                 tooltip=["fuente:N", alt.Tooltip("capacidad_mw_total:Q", title="Capacidad (MW)")],
             )
             .properties(height=320, title="📊 Capacidad por tipo de energía")
@@ -317,7 +319,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             .encode(
                 x=alt.X("fuente:N", title=None),
                 y=alt.Y("lcoe_promedio:Q", title="USD/MWh"),
-                color=alt.Color("fuente:N", legend=None, scale=_energy_color_scale()),
+                color=alt.Color("fuente:N", legend=alt.Legend(title="Tipo"), scale=_energy_color_scale(), sort=ENERGY_COLOR_DOMAIN),
                 tooltip=["fuente:N", alt.Tooltip("lcoe_promedio:Q", title="LCOE", format=".2f")],
             )
             .properties(height=320, title="💰 LCOE por tecnología")
@@ -502,6 +504,7 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
         .merge(proyectos[["id_proyecto", "nombre", "id_tipo"]], on="id_proyecto", how="left")
         .merge(tipo[["id_tipo_energia", "fuente"]], left_on="id_tipo", right_on="id_tipo_energia", how="left")
     )
+    costos["fuente"] = costos["fuente"].astype(str).str.strip()
 
     st.markdown("### Filtros")
     f1, f2, f3, f4 = st.columns([1.2, 2.2, 1.0, 1.4])
@@ -548,7 +551,7 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
             .encode(
                 x=alt.X("nombre:N", title=None, sort=costos_f["nombre"].tolist()),
                 y=alt.Y("lcoe_usd_mwh:Q", title="USD/MWh"),
-                color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale()),
+                color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale(), sort=ENERGY_COLOR_DOMAIN),
                 tooltip=["nombre:N", "fuente:N", alt.Tooltip("lcoe_usd_mwh:Q", title="LCOE")],
             )
             .properties(height=320, title=f"📊 LCOE comparativo {anio_sel}")
@@ -561,7 +564,7 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
             .encode(
                 x=alt.X("nombre:N", title=None, sort=costos_f["nombre"].tolist()),
                 y=alt.Y("capex_musd:Q", title="M USD"),
-                color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale()),
+                color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale(), sort=ENERGY_COLOR_DOMAIN),
                 tooltip=["nombre:N", "fuente:N", alt.Tooltip("capex_musd:Q", title="CAPEX (M USD)")],
             )
             .properties(height=320, title="💵 CAPEX por proyecto")
