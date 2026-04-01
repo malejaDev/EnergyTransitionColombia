@@ -147,14 +147,22 @@ def _page_header(title: str, subtitle: str = "Transición Energética 2019-2025"
     st.markdown(
         f"""
         <div class="neo-flat" style="padding: 1rem 1.25rem; margin-bottom: 0.9rem;">
-          <div style="text-align:center;">
-            <div style="font-weight: 900; font-size: 1.35rem; color: var(--color-text-primary);">
-              {title}
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+            <div style="display:flex; align-items:center; justify-content:center; gap: 0.75rem; flex-wrap: wrap;">
+              <div style="
+                width: 48px; height: 48px; border-radius: 0.9rem;
+                display:flex; align-items:center; justify-content:center;
+                background: var(--color-accent-main); color: white; font-weight: 900; font-size: 22px;
+                box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+              ">⚡</div>
+              <div style="font-weight: 900; font-size: 1.35rem; color: var(--color-text-primary);">
+                {title}
+              </div>
             </div>
-            <div style="font-size: 0.95rem; color: var(--color-text-secondary); margin-top: 0.15rem;">
+            <div style="font-size: 0.95rem; color: var(--color-text-secondary); margin-top: 0.25rem;">
               {subtitle}
             </div>
-          </div>
+        </div>
         </div>
         """,
         unsafe_allow_html=True,
