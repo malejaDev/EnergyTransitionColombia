@@ -201,14 +201,52 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
     lcoe_promedio = float(costos["lcoe_usd_mwh"].mean())
 
     st.markdown("### Resumen")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Proyectos activos", int(len(proyectos)), "↑ 25% vs 2019")
-    c2.metric("Capacidad total (GW)", f"{capacidad_total/1000:.1f}", "↑ 15% renovable")
-    c3.metric("Inversión total (B USD)", f"{inversion_total/1000:.1f}", "↑ 40% privado")
-    c4, c5, c6 = st.columns(3)
-    c4.metric("Usuarios beneficiados", f"{usuarios_total/1_000_000:.1f}M", "98.5% disponibilidad")
-    c5.metric("LCOE promedio (USD/MWh)", f"{lcoe_promedio:.2f}", "↓ 12% vs 2019")
-    c6.metric("Energía renovable", "73%", "Meta 2025: 80%")
+
+    def stat_card(icon: str, value: str, label: str, change: str, positive: bool = True) -> None:
+        change_color = "var(--color-accent-main)" if positive else "#ea580c"
+        st.markdown(
+            f"""
+            <div class="neo-card" style="padding: 18px; text-align:center;">
+              <div style="
+                width: 64px; height: 64px; border-radius: 999px;
+                margin: 0 auto 12px auto;
+                display:flex; align-items:center; justify-content:center;
+                box-shadow: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light);
+                color: var(--color-accent-main);
+                font-size: 28px;
+              ">{icon}</div>
+              <div style="font-size: 28px; font-weight: 900; color: var(--color-text-primary); line-height: 1.1;">
+                {value}
+              </div>
+              <div style="margin-top: 2px; font-size: 13px; font-weight: 650; color: var(--color-text-secondary);">
+                {label}
+              </div>
+              <div style="
+                margin-top: 10px; display:inline-block;
+                padding: 4px 10px; border-radius: 999px;
+                box-shadow: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light);
+                font-size: 12px; font-weight: 650; color: {change_color};
+              ">{change}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    r1, r2, r3 = st.columns(3)
+    with r1:
+        stat_card("🏗️", f"{int(len(proyectos))}", "Proyectos Activos", "↑ 25% vs 2019", positive=True)
+    with r2:
+        stat_card("⚡", f"{capacidad_total/1000:.1f} GW", "Capacidad Total", "↑ 15% renovable", positive=True)
+    with r3:
+        stat_card("💰", f"${inversion_total/1000:.1f}B", "Inversión Total", "↑ 40% privado", positive=True)
+
+    r4, r5, r6 = st.columns(3)
+    with r4:
+        stat_card("👥", f"{usuarios_total/1_000_000:.1f}M", "Usuarios Beneficiados", "98.5% disponibilidad", positive=True)
+    with r5:
+        stat_card("📉", f"${lcoe_promedio:.2f}", "LCOE Promedio", "↓ 12% vs 2019", positive=False)
+    with r6:
+        stat_card("🌿", "73%", "Energía Renovable", "Meta 2025: 80%", positive=True)
 
     st.markdown("### Mix energético Colombia")
     capacidad_por_tipo = (
