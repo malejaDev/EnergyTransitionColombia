@@ -183,7 +183,6 @@ def _top_nav(current_view: str) -> str:
 
     def _set_view(vid: str) -> None:
         st.session_state["view"] = vid
-        st.rerun()
 
     cols = st.columns(len(nav_items), gap="small")
     for i, (vid, label, icon) in enumerate(nav_items):
