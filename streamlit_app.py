@@ -282,7 +282,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
                 color=alt.Color("fuente:N", title="Tipo"),
                 tooltip=["fuente:N", alt.Tooltip("capacidad_mw_total:Q", title="Capacidad (MW)")],
             )
-            .properties(height=320, title="Capacidad por tipo de energía")
+            .properties(height=320, title="📊 Capacidad por tipo de energía")
         )
         st.altair_chart(chart, use_container_width=True)
 
@@ -296,7 +296,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
                 color=alt.Color("fuente:N", legend=None),
                 tooltip=["fuente:N", alt.Tooltip("lcoe_promedio:Q", title="LCOE", format=".2f")],
             )
-            .properties(height=320, title="LCOE por tecnología")
+            .properties(height=320, title="💰 LCOE por tecnología")
         )
         st.altair_chart(chart, use_container_width=True)
 
@@ -309,7 +309,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
                 base.mark_bar(color="#f59e0b").encode(y=alt.Y("opex_musd:Q"), tooltip=["nombre:N", "opex_musd:Q"]),
             )
             .resolve_scale(y="shared")
-            .properties(height=320, title="Inversión CAPEX vs OPEX (por proyecto)")
+            .properties(height=320, title="📈 Inversión CAPEX vs OPEX")
         )
         st.altair_chart(chart, use_container_width=True)
 
@@ -322,12 +322,50 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
                 color=alt.Color("nombre:N", title="Proyecto"),
                 tooltip=["nombre:N", alt.Tooltip("usuarios:Q", title="Usuarios")],
             )
-            .properties(height=320, title="Cobertura (usuarios) por proyecto")
+            .properties(height=320, title="👥 Cobertura por proyecto")
         )
         st.altair_chart(chart, use_container_width=True)
 
     st.markdown("### Tipos de energía renovable")
-    st.dataframe(tipo[["fuente", "descripcion"]], use_container_width=True, hide_index=True)
+
+    capacidad_by_tipo = proyectos.groupby("id_tipo", as_index=False)["capacidad_mw"].sum().rename(columns={"capacidad_mw": "capacidad_total_mw"})
+    tipo_cards = tipo.merge(capacidad_by_tipo, left_on="id_tipo_energia", right_on="id_tipo", how="left").fillna({"capacidad_total_mw": 0})
+
+    icon_by_fuente = {
+        "Hidráulica": "💧",
+        "Solar": "☀️",
+        "Eólica": "🌬️",
+        "Geotérmica": "🔥",
+    }
+
+    def energy_type_card(icon: str, title: str, desc: str, value: str) -> None:
+        st.markdown(
+            f"""
+            <div class="neo-card" style="padding: 18px; text-align:center; position: relative; overflow:hidden;">
+              <div style="position:absolute; top:0; left:0; width:100%; height:4px; background: var(--color-accent-main);"></div>
+              <div style="font-size: 40px; margin: 8px 0 10px 0; color: var(--color-accent-main);">{icon}</div>
+              <div style="font-weight: 850; font-size: 18px; color: var(--color-text-primary);">{title}</div>
+              <div style="margin-top: 6px; font-size: 13px; color: var(--color-text-secondary); min-height: 34px;">{desc}</div>
+              <div style="margin-top: 10px; font-weight: 900; color: var(--color-accent-main);">{value}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    cols = st.columns(4)
+    for idx, fuente in enumerate(["Hidráulica", "Solar", "Eólica", "Geotérmica"]):
+        row = tipo_cards[tipo_cards["fuente"] == fuente]
+        if row.empty:
+            continue
+        r = row.iloc[0]
+        mw = float(r["capacidad_total_mw"])
+        with cols[idx]:
+            energy_type_card(
+                icon_by_fuente.get(fuente, "⚡"),
+                fuente,
+                str(r["descripcion"]),
+                f"{mw:,.0f} MW".replace(",", "."),
+            )
 
 
 def _view_proyectos(d: dict[str, pd.DataFrame]) -> None:
