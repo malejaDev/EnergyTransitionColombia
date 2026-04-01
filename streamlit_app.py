@@ -192,6 +192,7 @@ def _page_header(title: str, subtitle: str = "Transición Energética 2019-2025"
 
 def _top_nav(current_view: str) -> str:
     nav_items: list[tuple[str, str, str]] = [
+        ("inicio", "Inicio", "⚡"),
         ("dashboard", "Dashboard", "📊"),
         ("proyectos", "Proyectos", "🏗️"),
         ("costos", "Costos", "💰"),
@@ -217,6 +218,101 @@ def _top_nav(current_view: str) -> str:
             )
 
     return st.session_state.get("view", current_view)
+
+
+def _view_inicio() -> None:
+    st.markdown("### Bienvenido")
+    st.markdown(
+        """
+        <div class="neo-card" style="padding: 18px;">
+          <div style="font-weight: 900; font-size: 18px; margin-bottom: 6px; color: var(--color-text-primary);">
+            EnergyTrans Colombia
+          </div>
+          <div style="color: var(--color-text-secondary); font-size: 14px; line-height: 1.5;">
+            Este proyecto consolida indicadores clave para explorar la <b>Transición Energética en Colombia (2019–2025)</b>:
+            proyectos, costos (LCOE/CAPEX/OPEX), cobertura y marco regulatorio. La app está diseñada para navegación rápida,
+            comparaciones visuales y consultas exploratorias.
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown(
+            """
+            <div class="neo-card" style="padding: 18px;">
+              <div style="font-weight: 900; color: var(--color-text-primary);">🎯 Objetivo</div>
+              <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.5;">
+                Entender el avance de tecnologías renovables y su impacto en capacidad instalada, inversión y cobertura.
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with c2:
+        st.markdown(
+            """
+            <div class="neo-card" style="padding: 18px;">
+              <div style="font-weight: 900; color: var(--color-text-primary);">🧩 Qué encontrarás</div>
+              <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.55;">
+                - Dashboard ejecutivo<br/>
+                - Filtros por tipo/departamento/proyecto<br/>
+                - Costos con análisis dinámico<br/>
+                - Cobertura y disponibilidad<br/>
+                - Marco regulatorio e incentivos
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with c3:
+        st.markdown(
+            """
+            <div class="neo-card" style="padding: 18px;">
+              <div style="font-weight: 900; color: var(--color-text-primary);">🗂️ Datos</div>
+              <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.55;">
+                Fuentes esperadas: MinEnergía / UPME.<br/>
+                En esta demo, los datos son <b>mock</b> para mostrar la experiencia y el modelo dimensional.
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("### Guía rápida")
+    g1, g2 = st.columns(2)
+    with g1:
+        st.markdown(
+            """
+            <div class="neo-card" style="padding: 18px;">
+              <div style="font-weight: 900; color: var(--color-text-primary);">✅ Cómo usar</div>
+              <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.6;">
+                1) Entra a <b>Dashboard</b> para una vista ejecutiva.<br/>
+                2) Usa <b>Proyectos</b> para explorar por tipo/departamento/capacidad.<br/>
+                3) En <b>Costos</b>, filtra por tipo/año/proyectos para comparar LCOE y CAPEX.<br/>
+                4) En <b>Cobertura</b> revisa usuarios y disponibilidad por proyecto.<br/>
+                5) En <b>Consultas</b> haz exploración tipo SQL (demo).
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with g2:
+        st.markdown(
+            """
+            <div class="neo-card" style="padding: 18px;">
+              <div style="font-weight: 900; color: var(--color-text-primary);">⚠️ Notas de calidad</div>
+              <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.6;">
+                - Los valores actuales son demostrativos (mock).<br/>
+                - El estándar de colores por tipo de energía se mantiene en toda la app.<br/>
+                - Si conectas datos reales, la vista de Costos habilitará más años automáticamente.
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
@@ -790,12 +886,14 @@ def main() -> None:
     d = _get_data()
 
     if "view" not in st.session_state:
-        st.session_state["view"] = "dashboard"
+        st.session_state["view"] = "inicio"
 
     _page_header("EnergyTrans Colombia")
     view = _top_nav(st.session_state["view"])
 
-    if view == "dashboard":
+    if view == "inicio":
+        _view_inicio()
+    elif view == "dashboard":
         _view_dashboard(d)
     elif view == "proyectos":
         _view_proyectos(d)
