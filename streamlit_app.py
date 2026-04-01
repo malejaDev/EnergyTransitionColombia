@@ -489,15 +489,18 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
     proyectos = d["proyectos"]
     costos = d["costos"].merge(proyectos[["id_proyecto", "nombre"]], on="id_proyecto", how="left")
 
+    palette = ["#0284c7", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#14b8a6"]
+
     st.markdown("### Gráficas")
     col1, col2 = st.columns(2)
     with col1:
         chart = (
             alt.Chart(costos)
-            .mark_bar(color="#006b3f")
+            .mark_bar()
             .encode(
                 x=alt.X("nombre:N", title=None),
                 y=alt.Y("lcoe_usd_mwh:Q", title="USD/MWh"),
+                color=alt.Color("nombre:N", legend=None, scale=alt.Scale(range=palette)),
                 tooltip=["nombre:N", alt.Tooltip("lcoe_usd_mwh:Q", title="LCOE")],
             )
             .properties(height=320, title="📊 LCOE comparativo 2024")
@@ -506,10 +509,11 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
     with col2:
         chart = (
             alt.Chart(costos)
-            .mark_bar(color="#006b3f")
+            .mark_bar()
             .encode(
                 x=alt.X("nombre:N", title=None),
                 y=alt.Y("capex_musd:Q", title="M USD"),
+                color=alt.Color("nombre:N", legend=None, scale=alt.Scale(range=palette)),
                 tooltip=["nombre:N", alt.Tooltip("capex_musd:Q", title="CAPEX (M USD)")],
             )
             .properties(height=320, title="💵 CAPEX por proyecto")
