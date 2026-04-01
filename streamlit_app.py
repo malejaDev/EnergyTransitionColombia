@@ -37,6 +37,10 @@ def _inject_global_css() -> None:
             border: 1px solid rgba(255, 255, 255, 0.5);
           }
 
+          /* Altair: tipografía y color de títulos */
+          .vega-embed summary { display: none; }
+          .vega-embed .chart-wrapper { border-radius: 16px; }
+
           /* Botones estilo "neo-btn" para navegación */
           div[data-testid="stButton"] > button {
             background-color: var(--color-box-bg) !important;
@@ -490,25 +494,25 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
     with col1:
         chart = (
             alt.Chart(costos)
-            .mark_bar(color="#0284c7")
+            .mark_bar(color="#006b3f")
             .encode(
                 x=alt.X("nombre:N", title=None),
                 y=alt.Y("lcoe_usd_mwh:Q", title="USD/MWh"),
                 tooltip=["nombre:N", alt.Tooltip("lcoe_usd_mwh:Q", title="LCOE")],
             )
-            .properties(height=320, title="LCOE comparativo 2024")
+            .properties(height=320, title="📊 LCOE comparativo 2024")
         )
         st.altair_chart(chart, use_container_width=True)
     with col2:
         chart = (
             alt.Chart(costos)
-            .mark_bar(color="#0284c7")
+            .mark_bar(color="#006b3f")
             .encode(
                 x=alt.X("nombre:N", title=None),
                 y=alt.Y("capex_musd:Q", title="M USD"),
                 tooltip=["nombre:N", alt.Tooltip("capex_musd:Q", title="CAPEX (M USD)")],
             )
-            .properties(height=320, title="CAPEX por proyecto")
+            .properties(height=320, title="💵 CAPEX por proyecto")
         )
         st.altair_chart(chart, use_container_width=True)
 
