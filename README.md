@@ -1,40 +1,86 @@
-# EnergyTransitionColombia (Streamlit)
+# ⚡ EnergyTransitionColombia (Streamlit)
 
-Esta carpeta contiene la versión compatible con **Streamlit** de la app originalmente ubicada en `energytrans-colombia/` (React + Vite).
+Dashboard interactivo para explorar indicadores de **Transición Energética en Colombia (2019–2025)**: proyectos, costos (LCOE/CAPEX/OPEX), cobertura/disponibilidad y marco regulatorio.
 
-## Contexto académico
+## 🌐 App online (Streamlit)
 
-Este proyecto fue realizado para el **curso de Análisis de Datos Integrador** de **Talento Tech**.
+- **URL**: `https://energytransitioncolombia.streamlit.app/`
+- **Archivo principal**: `EnergyTransitionColombia/streamlit_app.py`
 
-## Integrantes
+## 🎯 Objetivo
+
+- Consolidar y visualizar métricas clave de la transición energética.
+- Facilitar comparación entre **tecnologías** (Hidráulica, Solar, Eólica, Geotérmica) con un estándar de color consistente.
+- Permitir exploración con filtros y vistas temáticas (costos, cobertura, regulación, etc.).
+
+## 🧑‍🤝‍🧑 Integrantes
 
 - Claudia Arroyave
 - Michely Muñoz
 - Jesus Garcia
 - Maria Alejandra Colorado Ríos
 
-## Ejecutar local (opcional)
+## 🎓 Contexto académico
 
-1. Crear entorno e instalar dependencias:
+Proyecto realizado para el **curso de Análisis de Datos Integrador** de **Talento Tech**.
+
+## 🧱 Esquema del proyecto
+
+### 🗂️ Estructura (carpeta Streamlit)
+
+```text
+EnergyTransitionColombia/
+  streamlit_app.py          # App Streamlit (UI + cálculos + charts)
+  requirements.txt          # Dependencias Python
+  .streamlit/config.toml    # Tema (colores/estilo)
+  README.md                 # Este documento
+```
+
+### 🧠 Modelo lógico (demo con datos mock)
+
+- **Dimensiones**
+  - `tipo_energia`: tecnología (fuente, descripción)
+  - `proyectos`: proyecto (nombre, departamento, tipo, capacidad)
+  - `regulacion`: ley/incentivo
+- **Hechos**
+  - `costos`: LCOE, CAPEX, OPEX por proyecto/año
+  - `cobertura`: usuarios y disponibilidad por proyecto
+
+## 🧭 Navegación (módulos)
+
+- **⚡ Inicio**: landing del proyecto + guía rápida.
+- **📊 Dashboard**: resumen ejecutivo + mix energético + tarjetas de tipos de energía.
+- **🏗️ Proyectos**: filtros + tarjetas neomórficas + tabla.
+- **💰 Costos**: filtros dinámicos que alimentan gráficas y tabla.
+- **📶 Cobertura**: usuarios y disponibilidad (colores estandarizados por tipo).
+- **📄 Regulación**: incentivos y visualización de impacto.
+- **🔎 Consultas**: exploración tipo SQL (demo).
+
+## 🛠️ Instalación y ejecución local (Windows)
+
+1) Crear entorno e instalar dependencias:
 
 ```bash
 python -m venv .venv
 .\.venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r EnergyTransitionColombia/requirements.txt
 ```
 
-2. Ejecutar:
+2) Ejecutar Streamlit:
 
 ```bash
-streamlit run streamlit_app.py
+streamlit run EnergyTransitionColombia/streamlit_app.py
 ```
 
-## Desplegar online (Streamlit Community Cloud)
+## 🚀 Despliegue (Streamlit Community Cloud)
 
-1. Sube este repo a GitHub.
-2. Entra a [Streamlit](https://streamlit.io/) y ve a **Community Cloud**.
-3. Selecciona el repo y configura:
+1) Sube el repo a GitHub.
+2) Entra a [Streamlit](https://streamlit.io/) → **Community Cloud**.
+3) Configura:
    - **Main file path**: `EnergyTransitionColombia/streamlit_app.py`
-   - **Python dependencies**: `EnergyTransitionColombia/requirements.txt` (Streamlit lo detecta automáticamente al estar en el repo)
+   - **Dependencias**: `EnergyTransitionColombia/requirements.txt` (Streamlit las detecta automáticamente)
 
-Listo: el despliegue debería quedar automatizado en cada push.
+## 🧩 Notas
+
+- Los datos actuales en la app son **mock** para demostrar la experiencia end-to-end.
+- Al conectar datos reales, se habilitan más años automáticamente en los filtros (p. ej., en **Costos**).
