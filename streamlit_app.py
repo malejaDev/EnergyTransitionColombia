@@ -20,6 +20,12 @@ def _energy_color_scale() -> alt.Scale:
     return alt.Scale(domain=ENERGY_COLOR_DOMAIN, range=ENERGY_COLOR_RANGE)
 
 
+def _chart_interp(text: str) -> None:
+    """Interpretación breve para el usuario (lectura tipo científico de datos)."""
+    with st.expander("📌 Interpretación", expanded=False):
+        st.markdown(text)
+
+
 def _inject_global_css() -> None:
     st.markdown(
         """
@@ -432,6 +438,11 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             .properties(height=320, title="📊 Capacidad por tipo de energía")
         )
         st.altair_chart(chart, use_container_width=True)
+        _chart_interp(
+            "**Qué muestra:** participación de cada **tecnología** en la **capacidad instalada** (MW agregados).\n\n"
+            "**Cómo leerlo:** el ángulo de cada sector es proporcional a la capacidad; compara **mix** relativo, no volumen absoluto del sistema país.\n\n"
+            "**Matices:** proyectos grandes (p. ej. hidro) pueden dominar el pastel aunque otras tecnologías crezcan en número de plantas."
+        )
 
     with col_right:
         chart = (
@@ -446,6 +457,11 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             .properties(height=320, title="💰 LCOE por tecnología")
         )
         st.altair_chart(chart, use_container_width=True)
+        _chart_interp(
+            "**Qué muestra:** **LCOE promedio** (USD/MWh) por **tipo de energía** en el conjunto de proyectos con costo registrado.\n\n"
+            "**Cómo leerlo:** barras más altas implican **mayor costo nivelado** unitario en esta muestra; el color sigue la convención por tecnología.\n\n"
+            "**Matices:** es un **promedio simple** por fuente; no pondera por generación ni por tamaño hasta que se use un factor de ponderación explícito."
+        )
 
     col_left, col_right = st.columns(2)
     with col_left:
@@ -459,6 +475,11 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             .properties(height=320, title="📈 Inversión CAPEX vs OPEX")
         )
         st.altair_chart(chart, use_container_width=True)
+        _chart_interp(
+            "**Qué muestra:** para cada **proyecto**, **CAPEX** (azul) y **OPEX** (ámbar) en millones de USD.\n\n"
+            "**Cómo leerlo:** compara **intensidad de inversión** vs. **costo operativo anualizado**; proyectos con CAPEX alto no siempre tienen OPEX proporcionalmente alto.\n\n"
+            "**Matices:** la superposición en una misma escala facilita la comparación visual, pero valores muy distintos entre proyectos pueden comprimir la lectura de los más pequeños."
+        )
 
     with col_right:
         chart = (
@@ -472,6 +493,11 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             .properties(height=320, title="👥 Cobertura por proyecto")
         )
         st.altair_chart(chart, use_container_width=True)
+        _chart_interp(
+            "**Qué muestra:** distribución de **usuarios** asociados a cada **proyecto** en el dataset (no es la población de Colombia).\n\n"
+            "**Cómo leerlo:** sectores grandes concentran mayor peso en **cobertura declarada**; identifica qué proyecto arrastra el reparto.\n\n"
+            "**Matices:** no confundir con **demanda energética** ni con cobertura de redes sin definición explícita de la variable."
+        )
 
     st.markdown("### Tipos de energía renovable")
 
@@ -678,6 +704,11 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
             .properties(height=320, title=f"📊 LCOE comparativo {anio_sel}")
         )
         st.altair_chart(chart, use_container_width=True)
+        _chart_interp(
+            "**Qué muestra:** **LCOE** por **proyecto** bajo los filtros activos (año, tecnología, multiselección de proyectos).\n\n"
+            "**Cómo leerlo:** ordena jerárquicamente el **costo unitario** entre plantas comparables; el color refleja la **tecnología**.\n\n"
+            "**Matices:** al filtrar a un solo tipo, todas las barras comparten categoría —el valor está en comparar proyectos dentro de esa tecnología."
+        )
     with col2:
         chart = (
             alt.Chart(costos_f)
@@ -691,6 +722,11 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
             .properties(height=320, title="💵 CAPEX por proyecto")
         )
         st.altair_chart(chart, use_container_width=True)
+        _chart_interp(
+            "**Qué muestra:** **CAPEX** (inversión) en M USD por proyecto con los mismos filtros que el gráfico de LCOE.\n\n"
+            "**Cómo leerlo:** identifica **escala de desembolso** relativa; suele correlacionar con tamaño (MW) pero no de forma 1:1 por tecnología y sitio.\n\n"
+            "**Matices:** CAPEX elevado sin LCOE proporcionalmente alto puede indicar **vida útil** o **supuestos de generación** distintos en el cálculo de LCOE."
+        )
 
     st.markdown("### Tabla")
     costos_tbl = costos_f.copy()
@@ -738,6 +774,11 @@ def _view_cobertura(d: dict[str, pd.DataFrame]) -> None:
             .properties(height=320, title="👥 Usuarios por proyecto")
         )
         st.altair_chart(chart, use_container_width=True)
+        _chart_interp(
+            "**Qué muestra:** magnitud de **usuarios** por proyecto; el color indica **tipo de energía**.\n\n"
+            "**Cómo leerlo:** barras altas concentran mayor **alcance en usuarios** dentro de esta muestra.\n\n"
+            "**Matices:** la métrica depende de la definición operativa en datos; para inferencias sectoriales hace falta validar contra fuentes oficiales."
+        )
     with col2:
         base = alt.Chart(cobertura).encode(
             x=alt.X("nombre:N", title=None),
@@ -751,6 +792,11 @@ def _view_cobertura(d: dict[str, pd.DataFrame]) -> None:
             ),
         ).properties(height=320, title="✅ Disponibilidad (%)")
         st.altair_chart(chart, use_container_width=True)
+        _chart_interp(
+            "**Qué muestra:** **disponibilidad operativa (%)** por proyecto; la línea verde une puntos y el color del punto es la **tecnología**.\n\n"
+            "**Cómo leerlo:** el eje Y está acotado (95–100) para amplificar diferencias pequeñas; compara **homogeneidad** entre plantas.\n\n"
+            "**Matices:** rangos muy estrechos en la muestra pueden verse **planos**; con datos reales conviene revisar outliers y periodos."
+        )
 
     st.markdown("### Tabla")
     tabla = (
@@ -802,6 +848,11 @@ def _view_regulacion(d: dict[str, pd.DataFrame]) -> None:
         .properties(height=340)
     )
     st.altair_chart(chart, use_container_width=True)
+    _chart_interp(
+        "**Qué muestra:** magnitud del **% de ahorro** asociado a cada **ley** en el dataset de regulación.\n\n"
+        "**Cómo leerlo:** el área representa el peso relativo del porcentaje entre las leyes mostradas; no es impacto fiscal agregado en pesos.\n\n"
+        "**Matices:** los porcentajes son **atributos normativos simplificados**; el efecto económico real depende de base gravable y elegibilidad."
+    )
 
 
 def _generate_query_string(query_type: str, query_energia: str | None, query_anio: int | None) -> str:
@@ -897,6 +948,11 @@ def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
         .properties(height=320, title="Visualización de resultados")
     )
     st.altair_chart(chart, use_container_width=True)
+    _chart_interp(
+        "**Qué muestra:** barras del **resultado** de la consulta demo (`label` vs `value`) tras aplicar filtros.\n\n"
+        "**Cómo leerlo:** cuando `label` es un **tipo de energía**, el color sigue el estándar del tablero; si la consulta devuelve etiquetas genéricas, el gráfico es solo ilustrativo.\n\n"
+        "**Matices:** la lógica es **mock**; para producción debe reemplazarse por ejecución sobre `MatrizEnergeticaCol` o vistas SQL validadas."
+    )
 
 
 def main() -> None:
