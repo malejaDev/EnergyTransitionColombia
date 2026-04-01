@@ -146,17 +146,13 @@ def _format_currency_es_co(amount: float, digits: int = 2) -> str:
 def _page_header(title: str, subtitle: str = "Transición Energética 2019-2025") -> None:
     st.markdown(
         f"""
-        <div class="neo-flat" style="padding: 1rem 1.25rem; margin-bottom: 1.75rem;">
-          <div style="display:flex; align-items:center; gap: 0.9rem; flex-wrap: wrap;">
-            <div style="
-              width: 48px; height: 48px; border-radius: 0.9rem;
-              display:flex; align-items:center; justify-content:center;
-              background: var(--color-accent-main); color: white; font-weight: 800;">
-              ⚡
+        <div class="neo-flat" style="padding: 1rem 1.25rem; margin-bottom: 0.9rem;">
+          <div style="text-align:center;">
+            <div style="font-weight: 900; font-size: 1.35rem; color: var(--color-text-primary);">
+              {title}
             </div>
-            <div>
-              <div style="font-weight: 800; font-size: 1.25rem; color: var(--color-text-primary);">{title}</div>
-              <div style="font-size: 0.9rem; color: var(--color-text-secondary);">{subtitle}</div>
+            <div style="font-size: 0.95rem; color: var(--color-text-secondary); margin-top: 0.15rem;">
+              {subtitle}
             </div>
           </div>
         </div>
@@ -569,10 +565,9 @@ def main() -> None:
     if "view" not in st.session_state:
         st.session_state["view"] = "dashboard"
 
+    _page_header("EnergyTrans Colombia")
     st.session_state["view"] = _top_nav(st.session_state["view"])
     view = st.session_state["view"]
-
-    _page_header("EnergyTrans Colombia")
 
     if view == "dashboard":
         _view_dashboard(d)
