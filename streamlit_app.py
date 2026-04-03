@@ -234,13 +234,13 @@ def _view_inicio() -> None:
           <div style="font-weight: 900; font-size: 18px; margin-bottom: 6px; color: var(--color-text-primary);">
             EnergyTrans Colombia
           </div>
-          <div style="color: var(--color-text-secondary); font-size: 14px; line-height: 1.5;">
-            Este tablero usa la <b>misma muestra que el script MySQL</b>: costos con corte <b>2024</b> y dimensiones de proyectos/cobertura.
-            La serie diaria de <b>Fact_Generacion</b> del SQL (2020-01-01 a 2020-05-21) aún <b>no</b> se visualiza aquí; el cuaderno
-            <code>Transicion_Energetica.ipynb</code> trabaja un horizonte <b>2020–2026 sintético</b> aparte. Navegación rápida, comparaciones visuales y consultas demo.
+          <div style="color: var(--color-text-secondary); font-size: 14px; line-height: 1.55;">
+            Explora la <b>transición y diversificación de la matriz energética</b> en Colombia: composición por tecnologías
+            (hídrica, solar, eólica y geotérmica), economía de los proyectos y cobertura, en diálogo con el <b>marco regulatorio</b>.
+            Interfaz demo para comparar visualmente y consultar de forma exploratoria.
           </div>
-          <div style="margin-top: 10px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.5;">
-            Realizado para el <b>curso de Análisis de Datos Integrador</b> de <b>Talento Tech</b>.
+          <div style="margin-top: 10px; color: var(--color-text-secondary); font-size: 12px; line-height: 1.45;">
+            <b>Talento Tech</b> · Curso <b>Análisis de Datos Integrador</b>
           </div>
         </div>
         """,
@@ -254,7 +254,9 @@ def _view_inicio() -> None:
             <div class="neo-card" style="padding: 18px;">
               <div style="font-weight: 900; color: var(--color-text-primary);">🎯 Objetivo</div>
               <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.5;">
-                Entender el avance de tecnologías renovables y su impacto en capacidad instalada, inversión y cobertura.
+                Alineado a la problemática del proyecto: <b>diversificación de la matriz</b> (hídrica, solar, eólica, geotérmica)
+                vista al cruce de <b>capacidad</b>, <b>costos / inversión</b>, <b>cobertura</b> y <b>regulación</b>,
+                para lectura técnica y debate — las cifras de esta demo no son estadística oficial.
               </div>
             </div>
             """,
@@ -282,8 +284,9 @@ def _view_inicio() -> None:
             <div class="neo-card" style="padding: 18px;">
               <div style="font-weight: 900; color: var(--color-text-primary);">🗂️ Datos</div>
               <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.55;">
-                Fuentes esperadas: MinEnergía / UPME.<br/>
-                En esta demo, los datos son <b>mock</b> para mostrar la experiencia y el modelo dimensional.
+                <b>Capa demo:</b> mismo modelo dimensional que el SQL del repo; costos de referencia <b>2024</b>.
+                La generación diaria cargada en <b>Fact_Generacion</b> (hasta mayo 2020) <b>aún no</b> tiene gráficos en esta app.
+                El análisis ampliado vive en <code>Transicion_Energetica.ipynb</code> (serie sintética 2020–2026). Referentes metodológicos: XM, UPME, SGC.
               </div>
             </div>
             """,
