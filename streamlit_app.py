@@ -26,6 +26,56 @@ def _fmt_qty_es(value: float, decimals: int = 1) -> str:
     return s.replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def _labels_for_max_ties(df: pd.DataFrame, cat_col: str, val_col: str) -> tuple[float, list[str]]:
+    mx = float(df[val_col].max())
+    cats = df.loc[df[val_col] == mx, cat_col].astype(str).unique().tolist()
+    return mx, sorted(cats)
+
+
+def _labels_for_min_ties(df: pd.DataFrame, cat_col: str, val_col: str) -> tuple[float, list[str]]:
+    mn = float(df[val_col].min())
+    cats = df.loc[df[val_col] == mn, cat_col].astype(str).unique().tolist()
+    return mn, sorted(cats)
+
+
+def _fmt_cat_list(cats: list[str]) -> str:
+    if len(cats) == 1:
+        return f"**{cats[0]}**"
+    if len(cats) == 2:
+        return f"**{cats[0]}** y **{cats[1]}**"
+    return "**" + "**, **".join(cats[:-1]) + f"** y **{cats[-1]}**"
+
+
+def _interp_numeric_profile(s: pd.Series, decimals: int = 2) -> str:
+    """Perfil n, min, max, media, mediana e IQR (si n≥4)."""
+    s = pd.to_numeric(s, errors="coerce").dropna()
+    n = len(s)
+    if n == 0:
+        return "_Sin valores numéricos._"
+    parts = [
+        f"**n={n}**",
+        f"mín **{_fmt_qty_es(float(s.min()), decimals)}**",
+        f"máx **{_fmt_qty_es(float(s.max()), decimals)}**",
+        f"media **{_fmt_qty_es(float(s.mean()), decimals)}**",
+        f"mediana **{_fmt_qty_es(float(s.median()), decimals)}**",
+    ]
+    if n >= 4:
+        q1, q3 = float(s.quantile(0.25)), float(s.quantile(0.75))
+        parts.append(f"IQR **{_fmt_qty_es(q3 - q1, decimals)}** (p25–p75)")
+    return " · ".join(parts)
+
+
+def _tukey_upper_fence(s: pd.Series, k: float = 1.5) -> float | None:
+    s = pd.to_numeric(s, errors="coerce").dropna()
+    if len(s) < 4:
+        return None
+    q1, q3 = float(s.quantile(0.25)), float(s.quantile(0.75))
+    iqr = q3 - q1
+    if iqr <= 0:
+        return None
+    return q3 + k * iqr
+
+
 def _interp_dominant_share(
     df: pd.DataFrame,
     cat_col: str,
@@ -33,31 +83,50 @@ def _interp_dominant_share(
     intro_sentence: str,
     unit: str,
     total_unit: str | None = None,
+    weight_col: str | None = None,
 ) -> str:
-    """Categoría de mayor valor y participación sobre el total (p. ej. mix por fuente)."""
+    """Mayor categoría y participación; con `weight_col` se suma ese campo por categoría antes del cálculo."""
     tu = total_unit or unit
     if df is None or df.empty:
         return "_No hay datos en el conjunto mostrado para generar el resumen._"
-    dd = df[[cat_col, val_col]].dropna(subset=[val_col]).copy()
+    if weight_col is not None:
+        if weight_col not in df.columns or cat_col not in df.columns:
+            return "_Faltan columnas para participación ponderada._"
+        dd = df[[cat_col, weight_col]].dropna(subset=[weight_col]).copy()
+        if dd.empty:
+            return "_No hay pesos numéricos válidos._"
+        dd = dd.groupby(cat_col, as_index=False)[weight_col].sum()
+        eff_col = weight_col
+    else:
+        dd = df[[cat_col, val_col]].dropna(subset=[val_col]).copy()
+        eff_col = val_col
     if dd.empty:
         return "_No hay valores numéricos válidos en la gráfica._"
-    tot = float(dd[val_col].sum())
+    tot = float(dd[eff_col].sum())
     if tot <= 0:
         return "_La suma del indicador es cero o no positiva; no se calcula participación relativa._"
-    idx = dd[val_col].idxmax()
-    row = dd.loc[idx]
-    cat = str(row[cat_col])
-    val = float(row[val_col])
-    pct = 100.0 * val / tot
+    mx, tie_cats = _labels_for_max_ties(dd, cat_col, eff_col)
+    tied = dd[dd[cat_col].isin(tie_cats)]
+    combined = float(tied[eff_col].sum())
+    pct_combined = 100.0 * combined / tot
+    wnote = f" La participación usa **suma de `{weight_col}`** por categoría." if weight_col else ""
+    if len(tie_cats) == 1:
+        val = float(tied[eff_col].iloc[0])
+        pct = 100.0 * val / tot
+        return (
+            f"{intro_sentence} {_fmt_cat_list(tie_cats)}, con **~{_fmt_qty_es(val)} {unit}**, "
+            f"lo que representa aproximadamente el **{_fmt_qty_es(pct)}%** del total "
+            f"(**~{_fmt_qty_es(tot)} {tu}** en **{len(dd)}** categorías en pantalla).{wnote}"
+        )
     return (
-        f"{intro_sentence} **{cat}**, con **~{_fmt_qty_es(val)} {unit}**, "
-        f"lo que representa aproximadamente el **{_fmt_qty_es(pct)}%** del total "
-        f"(**~{_fmt_qty_es(tot)} {tu}** en **{len(dd)}** categorías en pantalla)."
+        f"{intro_sentence} **empate** al máximo entre {_fmt_cat_list(tie_cats)} (~{_fmt_qty_es(mx)} {unit} c/u); "
+        f"en conjunto **~{_fmt_qty_es(combined)} {unit}** (**~{_fmt_qty_es(pct_combined)}%** del total "
+        f"**~{_fmt_qty_es(tot)} {tu}**, **{len(dd)}** categorías).{wnote}"
     )
 
 
 def _interp_min_max_mean_rows(df: pd.DataFrame, cat_col: str, val_col: str, metric_label: str, unit: str) -> str:
-    """Rango y promedio cuando cada fila es una categoría (p. ej. LCOE por tecnología)."""
+    """Rango, promedio, mediana e IQR; admite empates en máximo y mínimo."""
     if df is None or df.empty:
         return "_No hay datos para resumir._"
     d = df[[cat_col, val_col]].dropna(subset=[val_col]).copy()
@@ -69,19 +138,36 @@ def _interp_min_max_mean_rows(df: pd.DataFrame, cat_col: str, val_col: str, metr
             f"Solo figura **{r[cat_col]}** con **~{_fmt_qty_es(float(r[val_col]))} {unit}**; "
             "agregue más categorías en los datos para comparar rangos."
         )
-    i_max = d[val_col].idxmax()
-    i_min = d[val_col].idxmin()
-    rmax, rmin = d.loc[i_max], d.loc[i_min]
+    mx, max_cats = _labels_for_max_ties(d, cat_col, val_col)
+    mn, min_cats = _labels_for_min_ties(d, cat_col, val_col)
     mu = float(d[val_col].mean())
-    return (
-        f"- **Mayor {metric_label}:** **{rmax[cat_col]}** (~{_fmt_qty_es(float(rmax[val_col]))} {unit}).\n"
-        f"- **Menor {metric_label}:** **{rmin[cat_col]}** (~{_fmt_qty_es(float(rmin[val_col]))} {unit}).\n"
-        f"- **Promedio simple** entre las {len(d)} categorías mostradas: ~{_fmt_qty_es(mu)} {unit}."
-    )
+    med = float(d[val_col].median())
+    lines: list[str] = []
+    if len(max_cats) == 1:
+        lines.append(f"- **Mayor {metric_label}:** **{max_cats[0]}** (~{_fmt_qty_es(mx)} {unit}).")
+    else:
+        lines.append(f"- **Mayor {metric_label}** (empate): {_fmt_cat_list(max_cats)} (~{_fmt_qty_es(mx)} {unit} c/u).")
+    if len(min_cats) == 1:
+        lines.append(f"- **Menor {metric_label}:** **{min_cats[0]}** (~{_fmt_qty_es(mn)} {unit}).")
+    else:
+        lines.append(f"- **Menor {metric_label}** (empate): {_fmt_cat_list(min_cats)} (~{_fmt_qty_es(mn)} {unit} c/u).")
+    lines.append(f"- **Promedio simple** entre las {len(d)} categorías mostradas: ~{_fmt_qty_es(mu)} {unit}.")
+    lines.append(f"- **Mediana:** ~{_fmt_qty_es(med)} {unit}.")
+    if len(d) >= 4:
+        q1 = float(d[val_col].quantile(0.25))
+        q3 = float(d[val_col].quantile(0.75))
+        iqr = q3 - q1
+        full = mx - mn
+        spread = "dispersión moderada" if full > 0 and iqr < 0.5 * full else "dispersión amplia respecto al rango"
+        lines.append(
+            f"- **IQR (p25–p75):** ~{_fmt_qty_es(q1)}–{_fmt_qty_es(q3)} {unit} "
+            f"(Δ ~{_fmt_qty_es(iqr)} {unit}; {spread} en esta muestra)."
+        )
+    return "\n".join(lines)
 
 
 def _interp_costos_proyecto_bars(df: pd.DataFrame, val_col: str, label_metric: str, unit: str, anio: object) -> str:
-    """Ranking sobre `nombre` para Costos (respeta filtros y multiselect)."""
+    """Ranking, mediana, IQR y valores altos tipo Tukey sobre `nombre`."""
     if df is None or df.empty:
         return "_Sin proyectos bajo los filtros actuales; amplíe la selección o ajuste año/tipo._"
     need = {"nombre", val_col}
@@ -90,17 +176,32 @@ def _interp_costos_proyecto_bars(df: pd.DataFrame, val_col: str, label_metric: s
     d = df[list(need)].dropna(subset=[val_col]).copy()
     if d.empty:
         return "_No hay valores numéricos para el indicador en la gráfica._"
-    i_max = d[val_col].idxmax()
-    i_min = d[val_col].idxmin()
-    rmax, rmin = d.loc[i_max], d.loc[i_min]
+    mx, max_cats = _labels_for_max_ties(d, "nombre", val_col)
+    mn, min_cats = _labels_for_min_ties(d, "nombre", val_col)
     mu = float(d[val_col].mean())
+    med = float(d[val_col].median())
     yr = f" (año **{anio}**)" if anio is not None and str(anio) != "" else ""
-    return (
-        f"Con **{len(d)}** proyecto(s) en pantalla{yr}:\n\n"
-        f"- **Mayor {label_metric}:** **{rmax['nombre']}** (~{_fmt_qty_es(float(rmax[val_col]))} {unit}).\n"
-        f"- **Menor {label_metric}:** **{rmin['nombre']}** (~{_fmt_qty_es(float(rmin[val_col]))} {unit}).\n"
-        f"- **Promedio** del conjunto filtrado: ~{_fmt_qty_es(mu)} {unit}."
-    )
+    lines: list[str] = [f"Con **{len(d)}** proyecto(s) en pantalla{yr}:\n"]
+    em_m = " — empate" if len(max_cats) > 1 else ""
+    em_n = " — empate" if len(min_cats) > 1 else ""
+    lines.append(f"- **Mayor {label_metric}:** {_fmt_cat_list(max_cats)} (~{_fmt_qty_es(mx)} {unit}){em_m}.")
+    lines.append(f"- **Menor {label_metric}:** {_fmt_cat_list(min_cats)} (~{_fmt_qty_es(mn)} {unit}){em_n}.")
+    lines.append(f"- **Promedio:** ~{_fmt_qty_es(mu)} {unit} · **Mediana:** ~{_fmt_qty_es(med)} {unit}.")
+    if len(d) >= 4:
+        q1 = float(d[val_col].quantile(0.25))
+        q3 = float(d[val_col].quantile(0.75))
+        iqr = q3 - q1
+        lines.append(f"- **IQR:** ~{_fmt_qty_es(q1)}–{_fmt_qty_es(q3)} {unit} (Δ ~{_fmt_qty_es(iqr)} {unit}).")
+        hi = _tukey_upper_fence(d[val_col])
+        if hi is not None:
+            out_mask = d[val_col] > hi
+            if out_mask.any():
+                out_names = sorted(d.loc[out_mask, "nombre"].astype(str).unique().tolist())
+                lines.append(
+                    f"- **Valores altos (Tukey):** por encima de ~{_fmt_qty_es(hi)} {unit}: "
+                    f"{_fmt_cat_list(out_names)} — revisar si son atípicos operativos o errores."
+                )
+    return "\n".join(lines)
 
 
 def _interp_capex_opex_cross(df: pd.DataFrame) -> str:
@@ -112,16 +213,25 @@ def _interp_capex_opex_cross(df: pd.DataFrame) -> str:
     d = df[list(need)].dropna(subset=["capex_musd", "opex_musd"]).copy()
     if d.empty:
         return "_Sin pares CAPEX/OPEX válidos._"
-    ic = d["capex_musd"].idxmax()
-    rc = d.loc[ic]
-    io = d["opex_musd"].idxmax()
-    ro = d.loc[io]
-    return (
-        f"- **Mayor CAPEX:** **{rc['nombre']}** (~{_fmt_qty_es(float(rc['capex_musd']))} M USD de inversión; "
-        f"OPEX ~{_fmt_qty_es(float(rc['opex_musd']))} M USD).\n"
-        f"- **Mayor OPEX:** **{ro['nombre']}** (~{_fmt_qty_es(float(ro['opex_musd']))} M USD operativo; "
-        f"CAPEX ~{_fmt_qty_es(float(ro['capex_musd']))} M USD)."
-    )
+    mxc, cats_c = _labels_for_max_ties(d, "nombre", "capex_musd")
+    mxo, cats_o = _labels_for_max_ties(d, "nombre", "opex_musd")
+    if len(cats_c) == 1:
+        rc = d[d["nombre"] == cats_c[0]].iloc[0]
+        line_c = (
+            f"- **Mayor CAPEX:** **{rc['nombre']}** (~{_fmt_qty_es(float(rc['capex_musd']))} M USD de inversión; "
+            f"OPEX ~{_fmt_qty_es(float(rc['opex_musd']))} M USD)."
+        )
+    else:
+        line_c = f"- **Mayor CAPEX** (empate): {_fmt_cat_list(cats_c)} (~{_fmt_qty_es(mxc)} M USD c/u)."
+    if len(cats_o) == 1:
+        ro = d[d["nombre"] == cats_o[0]].iloc[0]
+        line_o = (
+            f"- **Mayor OPEX:** **{ro['nombre']}** (~{_fmt_qty_es(float(ro['opex_musd']))} M USD operativo; "
+            f"CAPEX ~{_fmt_qty_es(float(ro['capex_musd']))} M USD)."
+        )
+    else:
+        line_o = f"- **Mayor OPEX** (empate): {_fmt_cat_list(cats_o)} (~{_fmt_qty_es(mxo)} M USD c/u)."
+    return f"{line_c}\n{line_o}"
 
 
 def _interp_disponibilidad(df: pd.DataFrame) -> str:
@@ -131,21 +241,29 @@ def _interp_disponibilidad(df: pd.DataFrame) -> str:
     if s.empty:
         return "_Disponibilidad sin valores numéricos._"
     mn, mx, mu = float(s.min()), float(s.max()), float(s.mean())
+    med = float(s.median())
     std = float(s.std(ddof=0)) if len(s) > 1 else 0.0
+    prof = _interp_numeric_profile(s, 2)
     if mx - mn < 0.05:
         return (
             f"En la muestra, la **disponibilidad** es casi **uniforme** "
-            f"(aprox. **{_fmt_qty_es(mu, 2)}%** de media; rango **{_fmt_qty_es(mx - mn, 2)}** puntos entre mínimo y máximo)."
+            f"(aprox. **{_fmt_qty_es(mu, 2)}%** de media y **{_fmt_qty_es(med, 2)}%** de mediana; "
+            f"rango **{_fmt_qty_es(mx - mn, 2)}** puntos). Perfil: {prof}."
         )
     i_max = s.idxmax()
     i_min = s.idxmin()
     nom = df["nombre"] if "nombre" in df.columns else pd.Series(index=s.index, dtype=object)
     hi = nom.loc[i_max] if i_max in nom.index else "—"
     lo = nom.loc[i_min] if i_min in nom.index else "—"
+    extra = ""
+    if len(s) >= 4:
+        q1, q3 = float(s.quantile(0.25)), float(s.quantile(0.75))
+        extra = f"\n- **IQR:** ~{_fmt_qty_es(q1, 2)}–{_fmt_qty_es(q3, 2)}% (Δ ~{_fmt_qty_es(q3 - q1, 3)} puntos)."
     return (
         f"- **Máximo:** **{hi}** (~{_fmt_qty_es(mx, 2)}%).\n"
         f"- **Mínimo:** **{lo}** (~{_fmt_qty_es(mn, 2)}%).\n"
-        f"- **Media** (~{_fmt_qty_es(mu, 2)}%) y **desv. típ.** ~{_fmt_qty_es(std, 3)} puntos ({len(s)} proyectos)."
+        f"- **Media** (~{_fmt_qty_es(mu, 2)}%), **mediana** (~{_fmt_qty_es(med, 2)}%) y **desv. típ.** "
+        f"~{_fmt_qty_es(std, 3)} puntos ({len(s)} proyectos).{extra}"
     )
 
 
@@ -162,14 +280,66 @@ def _interp_regulacion_chart(df: pd.DataFrame) -> str:
     r = d.loc[idx]
     if tot > 0:
         pct = 100.0 * float(r["pct_ahorro"]) / tot
-        share_txt = f"aprox. **{_fmt_qty_es(pct)}%** del total de porcentajes mostrados en el gráfico (suma **{_fmt_qty_es(tot, 1)}** pp entre leyes)."
+        share_txt = (
+            f"En el gráfico de dona, ese porcentaje tiene un **peso visual ~{_fmt_qty_es(pct)}%** respecto a la "
+            f"**suma** de los `%` de ahorro mostrados (**{_fmt_qty_es(tot, 1)}** pp en total entre leyes). "
+            f"**No** interpretar como peso en pesos ni impacto tributario real."
+        )
     else:
-        share_txt = "la suma de porcentajes es cero; revise los datos."
+        share_txt = "La suma de porcentajes es cero; revise los datos."
     return (
-        f"La ley con mayor **% de ahorro** declarado en el dataset es **{r['ley']}** "
-        f"(**{_fmt_qty_es(float(r['pct_ahorro']), 1)}** puntos porcentuales), "
-        f"{share_txt}"
+        f"La ley con mayor **% de ahorro** declarado en el dataset normativo es **{r['ley']}** "
+        f"(**{_fmt_qty_es(float(r['pct_ahorro']), 1)}** puntos porcentuales). {share_txt}"
     )
+
+
+def _interp_lcoe_yoy_global(costos: pd.DataFrame) -> str:
+    """Compara el LCOE medio global entre los dos años más recientes disponibles."""
+    y = costos.dropna(subset=["anio", "lcoe_usd_mwh"])
+    if y["anio"].nunique() < 2:
+        return ""
+    years = sorted(y["anio"].unique().tolist())
+    last_y, prev_y = int(years[-1]), int(years[-2])
+    m_last = float(y.loc[y["anio"] == last_y, "lcoe_usd_mwh"].mean())
+    m_prev = float(y.loc[y["anio"] == prev_y, "lcoe_usd_mwh"].mean())
+    if m_prev == 0:
+        return ""
+    ch = 100.0 * (m_last - m_prev) / m_prev
+    return (
+        f"**Contexto temporal (mock):** LCOE medio global **~{_fmt_qty_es(m_last)}** vs **~{_fmt_qty_es(m_prev)}** USD/MWh "
+        f"(**{last_y}** vs **{prev_y}**; variación relativa **{_fmt_qty_es(ch)}%**)."
+    )
+
+
+def _interp_lcoe_dashboard(lcoe_por_tipo: pd.DataFrame, yoy_note: str = "") -> str:
+    """LCOE por tecnología: estadísticas de la media simple del gráfico + LCOE ponderado por MW."""
+    if lcoe_por_tipo is None or lcoe_por_tipo.empty:
+        return "_Sin LCOE por tecnología._"
+    if not {"fuente", "lcoe_promedio", "lcoe_pond_mw"}.issubset(lcoe_por_tipo.columns):
+        return "_Faltan columnas para el resumen de LCOE._"
+    base = _interp_min_max_mean_rows(
+        lcoe_por_tipo,
+        "fuente",
+        "lcoe_promedio",
+        "LCOE (media simple entre proyectos)",
+        "USD/MWh",
+    )
+    lines = [
+        base,
+        "\n**LCOE ponderado por MW** dentro de cada tecnología (Σ LCOE×MW / Σ MW en el mock):",
+    ]
+    for _, r in lcoe_por_tipo.sort_values("fuente").iterrows():
+        simp = float(r["lcoe_promedio"])
+        pond = float(r["lcoe_pond_mw"])
+        if pd.isna(pond):
+            continue
+        dlt = pond - simp
+        lines.append(
+            f"- **{r['fuente']}:** ponderado ~{_fmt_qty_es(pond)} vs simple ~{_fmt_qty_es(simp)} USD/MWh (Δ ~{_fmt_qty_es(dlt)})."
+        )
+    if yoy_note:
+        lines.append("\n" + yoy_note)
+    return "\n".join(lines)
 
 
 def _interp_consulta_resultado(result_df: pd.DataFrame, query_type: str) -> str:
@@ -186,24 +356,71 @@ def _interp_consulta_resultado(result_df: pd.DataFrame, query_type: str) -> str:
             "_Este tipo de consulta aún devuelve un **resultado ilustrativo** en el motor mock. "
             "Conéctelo a **MatrizEnergeticaCol** para magnitudes reales._"
         )
+
+    qt = (query_type or "").strip()
+    if qt == "eficiencia":
+        prof = _interp_numeric_profile(d["value"], 2)
+        mx, max_labs = _labels_for_max_ties(d, "label", "value")
+        mn, min_labs = _labels_for_min_ties(d, "label", "value")
+        return (
+            f"**Disponibilidad (%)** por proyecto en el resultado: {prof}.\n\n"
+            f"- **Mayor disponibilidad:** {_fmt_cat_list(max_labs)} (~{_fmt_qty_es(mx, 2)}%).\n"
+            f"- **Menor disponibilidad:** {_fmt_cat_list(min_labs)} (~{_fmt_qty_es(mn, 2)}%)."
+        )
+
+    if qt == "inversion":
+        tot = float(d["value"].sum())
+        if tot <= 0 or tot != tot:
+            return "_Suma de inversión no positiva o no numérica._"
+        mx, labs = _labels_for_max_ties(d, "label", "value")
+        val = mx
+        pc = 100.0 * val / tot if tot else 0.0
+        if len(labs) == 1:
+            return (
+                f"**{labs[0]}** concentra la mayor **inversión CAPEX agregada** (~{_fmt_qty_es(val)} M USD), "
+                f"aprox. **{_fmt_qty_es(pc)}%** del total mostrado (~{_fmt_qty_es(tot)} M USD en **{len(d)}** categorías)."
+            )
+        return (
+            f"**Empate** al máximo entre {_fmt_cat_list(labs)} (~{_fmt_qty_es(val)} M USD c/u); "
+            f"suman ~{_fmt_qty_es(float(d.loc[d['label'].isin(labs), 'value'].sum()))} M USD del total ~{_fmt_qty_es(tot)} M USD."
+        )
+
+    if qt == "cobertura":
+        tot = float(d["value"].sum())
+        if tot <= 0:
+            return "_Total de usuarios no positivo._"
+        mx, labs = _labels_for_max_ties(d, "label", "value")
+        val = mx
+        pc = 100.0 * val / tot
+        if len(labs) == 1:
+            return (
+                f"El departamento **{labs[0]}** concentra más **usuarios** agregados (~{_fmt_qty_es(val)}), "
+                f"aprox. **{_fmt_qty_es(pc)}%** del subtotal (~{_fmt_qty_es(tot)} usuarios, **{len(d)}** filas)."
+            )
+        comb = float(d.loc[d["label"].isin(labs), "value"].sum())
+        return (
+            f"**Empate** al máximo en usuarios entre {_fmt_cat_list(labs)} (~{_fmt_qty_es(val)} c/u); "
+            f"en conjunto **~{_fmt_qty_es(comb)}** usuarios (**~{_fmt_qty_es(100.0 * comb / tot)}%** del total "
+            f"~{_fmt_qty_es(tot)} usuarios, **{len(d)}** filas)."
+        )
     tot = float(d["value"].sum())
     idx = d["value"].idxmax()
     r = d.loc[idx]
     lbl, val = str(r["label"]), float(r["value"])
-    if query_type == "capacidad" and tot > 0:
+    if qt == "capacidad" and tot > 0:
         pc = 100.0 * val / tot
         return (
             f"**{lbl}** aporta la mayor **capacidad agregada** (~{_fmt_qty_es(val)} MW), "
             f"alrededor del **{_fmt_qty_es(pc)}%** del subtotal mostrado (~{_fmt_qty_es(tot)} MW, **{len(d)}** categorías)."
         )
-    if query_type == "lcoe" and len(d) > 1:
+    if qt == "lcoe" and len(d) > 1:
         i_min = d["value"].idxmin()
         r0 = d.loc[i_min]
         return (
             f"LCOE **medio** por tecnología en el mock: va de ~{_fmt_qty_es(float(r0['value']))} USD/MWh (**{r0['label']}**, más bajo) "
             f"a ~{_fmt_qty_es(float(r['value']))} USD/MWh (**{lbl}**, más alto) sobre **{len(d)}** fuentes."
         )
-    if tot > 0 and tot == tot:  # not nan
+    if tot > 0 and tot == tot:
         pc = 100.0 * val / tot
         return (
             f"**{lbl}** concentra el **valor máximo** (~{_fmt_qty_es(val)}), "
@@ -212,14 +429,25 @@ def _interp_consulta_resultado(result_df: pd.DataFrame, query_type: str) -> str:
     return f"Valor **máximo** en **{lbl}**: ~{_fmt_qty_es(val)} (unidad según tipo de consulta)."
 
 
-def _chart_interp(resumen_datos: str, notas_metodologicas: str = "") -> None:
-    """Resumen calculado a partir del dataframe de la gráfica + guía metodológica opcional."""
+def _chart_interp(resumen_datos: str, notas_metodologicas: str = "", export_key: str | None = None) -> None:
+    """Resumen a partir del dataframe de la gráfica; `export_key` único habilita descarga .md."""
     with st.expander("📌 Interpretación", expanded=False):
         st.markdown("##### Resumen automático")
         st.markdown(resumen_datos)
         if notas_metodologicas.strip():
             st.markdown("##### Lectura metodológica")
             st.markdown(notas_metodologicas)
+        if export_key:
+            md = "## Resumen automático\n\n" + resumen_datos + "\n"
+            if notas_metodologicas.strip():
+                md += "\n## Lectura metodológica\n\n" + notas_metodologicas + "\n"
+            st.download_button(
+                label="Descargar interpretación (.md)",
+                data=md.encode("utf-8"),
+                file_name=f"interpretacion_{export_key}.md",
+                mime="text/markdown",
+                key=f"dl_interp_{export_key}",
+            )
 
 
 def _inject_global_css() -> None:
@@ -326,6 +554,7 @@ def _load_data() -> dict[str, pd.DataFrame]:
 
     costos = pd.DataFrame(
         [
+            # 2024 (año de referencia principal)
             {"id_proyecto": 101, "anio": 2024, "lcoe_usd_mwh": 47.54, "capex_musd": 2640.0, "opex_musd": 72.0},
             {"id_proyecto": 102, "anio": 2024, "lcoe_usd_mwh": 44.71, "capex_musd": 1334.3, "opex_musd": 36.39},
             {"id_proyecto": 201, "anio": 2024, "lcoe_usd_mwh": 68.64, "capex_musd": 205.7, "opex_musd": 5.61},
@@ -333,6 +562,14 @@ def _load_data() -> dict[str, pd.DataFrame]:
             {"id_proyecto": 301, "anio": 2024, "lcoe_usd_mwh": 41.42, "capex_musd": 22.0, "opex_musd": 0.6},
             {"id_proyecto": 302, "anio": 2024, "lcoe_usd_mwh": 82.13, "capex_musd": 554.4, "opex_musd": 15.12},
             {"id_proyecto": 401, "anio": 2024, "lcoe_usd_mwh": 42.34, "capex_musd": 55.0, "opex_musd": 1.5},
+            # 2023 (serie mock mínima para comparación YoY en interpretaciones)
+            {"id_proyecto": 101, "anio": 2023, "lcoe_usd_mwh": 48.36, "capex_musd": 2640.0, "opex_musd": 72.0},
+            {"id_proyecto": 102, "anio": 2023, "lcoe_usd_mwh": 45.58, "capex_musd": 1334.3, "opex_musd": 36.39},
+            {"id_proyecto": 201, "anio": 2023, "lcoe_usd_mwh": 69.96, "capex_musd": 205.7, "opex_musd": 5.61},
+            {"id_proyecto": 202, "anio": 2023, "lcoe_usd_mwh": 72.58, "capex_musd": 88.0, "opex_musd": 2.4},
+            {"id_proyecto": 301, "anio": 2023, "lcoe_usd_mwh": 42.22, "capex_musd": 22.0, "opex_musd": 0.6},
+            {"id_proyecto": 302, "anio": 2023, "lcoe_usd_mwh": 83.46, "capex_musd": 554.4, "opex_musd": 15.12},
+            {"id_proyecto": 401, "anio": 2023, "lcoe_usd_mwh": 43.08, "capex_musd": 55.0, "opex_musd": 1.5},
         ]
     )
 
@@ -543,9 +780,11 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
     cobertura = d["cobertura"]
 
     capacidad_total = float(proyectos["capacidad_mw"].sum())
-    inversion_total = float(costos["capex_musd"].sum())
+    anio_kpi = int(costos["anio"].max())
+    costos_kpi = costos.loc[costos["anio"] == anio_kpi]
+    inversion_total = float(costos_kpi["capex_musd"].sum())
     usuarios_total = int(cobertura["usuarios"].sum())
-    lcoe_promedio = float(costos["lcoe_usd_mwh"].mean())
+    lcoe_promedio = float(costos_kpi["lcoe_usd_mwh"].mean())
 
     st.markdown("### Resumen")
 
@@ -604,16 +843,21 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
     )
     capacidad_por_tipo["fuente"] = capacidad_por_tipo["fuente"].astype(str).str.strip()
 
-    lcoe_por_tipo = (
-        costos.merge(proyectos, on="id_proyecto", how="left")
+    base_lcoe = (
+        costos.loc[costos["anio"] == anio_kpi]
+        .merge(proyectos, on="id_proyecto", how="left")
         .merge(tipo, left_on="id_tipo", right_on="id_tipo_energia", how="left")
-        .groupby("fuente", as_index=False)["lcoe_usd_mwh"]
-        .mean()
-        .rename(columns={"lcoe_usd_mwh": "lcoe_promedio"})
     )
+    rows_lcoe: list[dict[str, object]] = []
+    for fuente, g in base_lcoe.groupby("fuente"):
+        mw = float(g["capacidad_mw"].sum())
+        lcoe_mean = float(g["lcoe_usd_mwh"].mean())
+        pond = float((g["lcoe_usd_mwh"] * g["capacidad_mw"]).sum() / mw) if mw > 0 else float("nan")
+        rows_lcoe.append({"fuente": fuente, "lcoe_promedio": lcoe_mean, "lcoe_pond_mw": pond})
+    lcoe_por_tipo = pd.DataFrame(rows_lcoe)
     lcoe_por_tipo["fuente"] = lcoe_por_tipo["fuente"].astype(str).str.strip()
 
-    capex_opex = costos.merge(proyectos[["id_proyecto", "nombre"]], on="id_proyecto", how="left")[
+    capex_opex = costos_kpi.merge(proyectos[["id_proyecto", "nombre"]], on="id_proyecto", how="left")[
         ["nombre", "capex_musd", "opex_musd"]
     ]
 
@@ -646,6 +890,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             "**Qué muestra:** participación por **tecnología** en **MW** agregados al cierre de la vista.\n\n"
             "**Cómo leerlo:** el ángulo de cada sector es proporcional al subtotal de MW; refleja el **mix** de esta muestra, no el sistema país completo.\n\n"
             "**Matices:** unidades grandes (p. ej. hidro) pueden dominar el pastel aunque existan más plantas de otras tecnologías.",
+            export_key="dash_mix_capacidad",
         )
 
     with col_right:
@@ -662,10 +907,11 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
         )
         st.altair_chart(chart, use_container_width=True)
         _chart_interp(
-            _interp_min_max_mean_rows(lcoe_por_tipo, "fuente", "lcoe_promedio", "LCOE promedio", "USD/MWh"),
-            "**Qué muestra:** **LCOE** medio por **tipo** entre proyectos con costo registrado en el mock.\n\n"
-            "**Cómo leerlo:** barras más altas = mayor costo nivelado **por tecnología** en esta agregación.\n\n"
-            "**Matices:** promedio **simple** por fuente (no ponderado por MWh generados hasta definir pesos).",
+            _interp_lcoe_dashboard(lcoe_por_tipo, _interp_lcoe_yoy_global(costos)),
+            "**Qué muestra:** **LCOE** medio **simple** por **tipo** (barra) para el año más reciente del mock; el resumen contrasta con el LCOE **ponderado por MW** dentro de cada tecnología.\n\n"
+            "**Cómo leerlo:** barras más altas = mayor costo nivelado en la media simple de proyectos; la ponderación re-pesa por **capacidad instalada**.\n\n"
+            "**Matices:** ninguno de los dos sustituye el LCOE del sistema país; son indicadores de la **muestra** cargada.",
+            export_key="dash_lcoe_tech",
         )
 
     col_left, col_right = st.columns(2)
@@ -685,6 +931,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             "**Qué muestra:** **CAPEX** (azul) y **OPEX** (ámbar) en **M USD** por proyecto presente en costos.\n\n"
             "**Cómo leerlo:** contraste entre **desembolso de inversión** y **gasto operativo**; no hay proporcionalidad esperada por definición.\n\n"
             "**Matices:** escala compartida puede **comprimir** barras de proyectos pequeños frente a mayores.",
+            export_key="dash_capex_opex",
         )
 
     with col_right:
@@ -711,6 +958,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             "**Qué muestra:** reparto de **usuarios** por **proyecto** según la tabla de cobertura cargada.\n\n"
             "**Cómo leerlo:** sectores amplios concentran la mayor parte del subtotal de usuarios **en esta muestra**.\n\n"
             "**Matices:** no equivale a población nacional ni a demanda eléctrica; depende de la definición operativa en datos.",
+            export_key="dash_cobertura_donut",
         )
 
     st.markdown("### Tipos de energía renovable")
@@ -923,6 +1171,7 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
             "**Qué muestra:** **LCOE** por **proyecto** bajo filtros (año, tecnología, multiselect).\n\n"
             "**Cómo leerlo:** compare **costo nivelado** entre plantas; el color es la **tecnología**.\n\n"
             "**Matices:** filtrando un solo tipo, el contraste es **intra-tecnología**.",
+            export_key=f"costos_lcoe_{anio_sel}",
         )
     with col2:
         chart = (
@@ -942,6 +1191,7 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
             "**Qué muestra:** **CAPEX** en **M USD** por proyecto con los mismos filtros que LCOE.\n\n"
             "**Cómo leerlo:** identifica **escala de inversión** relativa; no implica orden igual al LCOE.\n\n"
             "**Matices:** CAPEX alto con LCOE moderado puede reflejar **vida útil** u **hipótesis de generación** distintas.",
+            export_key=f"costos_capex_{anio_sel}",
         )
 
     st.markdown("### Tabla")
@@ -1002,6 +1252,7 @@ def _view_cobertura(d: dict[str, pd.DataFrame]) -> None:
             "**Qué muestra:** **usuarios** por **proyecto** y color por **tipo** de planta.\n\n"
             "**Cómo leerlo:** barras más altas concentran más peso en la variable de cobertura **de la muestra**.\n\n"
             "**Matices:** validar definición operativa antes de extrapolar a nivel sectorial.",
+            export_key="cobertura_usuarios",
         )
     with col2:
         base = alt.Chart(cobertura).encode(
@@ -1021,6 +1272,7 @@ def _view_cobertura(d: dict[str, pd.DataFrame]) -> None:
             "**Qué muestra:** **disponibilidad (%)** por proyecto; línea de unión y color por **tecnología**.\n\n"
             "**Cómo leerlo:** eje acotado (95–100) para resaltar diferencias pequeñas.\n\n"
             "**Matices:** si la muestra es casi constante, el gráfico se verá plano; con series largas conviene revisar outliers.",
+            export_key="cobertura_disponibilidad",
         )
 
     st.markdown("### Tabla")
@@ -1078,6 +1330,7 @@ def _view_regulacion(d: dict[str, pd.DataFrame]) -> None:
         "**Qué muestra:** peso relativo del **% de ahorro** asociado a cada **ley** en el dataset normativo cargado.\n\n"
         "**Cómo leerlo:** el sector refleja la magnitud del porcentaje **respecto a la suma** dibujada —no es impacto fiscal en pesos.\n\n"
         "**Matices:** el efecto real depende de **base gravable**, elegibilidad y ordenamiento jurídico.",
+        export_key="regulacion_incentivos",
     )
 
 
@@ -1103,23 +1356,82 @@ def _generate_query_string(query_type: str, query_energia: str | None, query_ani
     return query + ";"
 
 
-def _execute_query_mock(d: dict[str, pd.DataFrame], query_type: str, query_energia: str | None) -> pd.DataFrame:
+def _execute_query_mock(
+    d: dict[str, pd.DataFrame],
+    query_type: str,
+    query_energia: str | None,
+    query_anio: int | None = None,
+) -> pd.DataFrame:
     proyectos = d["proyectos"]
     tipo = d["tipo_energia"]
     costos = d["costos"]
+    cobertura = d["cobertura"]
+
+    def _ids_en_anio() -> set[int] | None:
+        if query_anio is None:
+            return None
+        return set(costos.loc[costos["anio"] == query_anio, "id_proyecto"].astype(int))
 
     if query_type == "capacidad":
         df = proyectos.merge(tipo, left_on="id_tipo", right_on="id_tipo_energia", how="left")
         if query_energia:
             df = df[df["id_tipo"].astype(str) == query_energia]
-        out = df.groupby("fuente", as_index=False)["capacidad_mw"].sum().rename(columns={"fuente": "label", "capacidad_mw": "value"})
+        ids = _ids_en_anio()
+        if ids is not None:
+            df = df[df["id_proyecto"].isin(ids)]
+        out = df.groupby("fuente", as_index=False)["capacidad_mw"].sum().rename(
+            columns={"fuente": "label", "capacidad_mw": "value"}
+        )
         return out
 
     if query_type == "lcoe":
-        df = costos.merge(proyectos, on="id_proyecto", how="left").merge(tipo, left_on="id_tipo", right_on="id_tipo_energia", how="left")
+        df = costos.merge(proyectos, on="id_proyecto", how="left").merge(
+            tipo, left_on="id_tipo", right_on="id_tipo_energia", how="left"
+        )
+        if query_anio is not None:
+            df = df[df["anio"] == query_anio]
         if query_energia:
             df = df[df["id_tipo"].astype(str) == query_energia]
-        out = df.groupby("fuente", as_index=False)["lcoe_usd_mwh"].mean().rename(columns={"fuente": "label", "lcoe_usd_mwh": "value"})
+        out = df.groupby("fuente", as_index=False)["lcoe_usd_mwh"].mean().rename(
+            columns={"fuente": "label", "lcoe_usd_mwh": "value"}
+        )
+        return out
+
+    if query_type == "inversion":
+        df = costos.merge(proyectos, on="id_proyecto", how="left").merge(
+            tipo, left_on="id_tipo", right_on="id_tipo_energia", how="left"
+        )
+        if query_anio is not None:
+            df = df[df["anio"] == query_anio]
+        if query_energia:
+            df = df[df["id_tipo"].astype(str) == query_energia]
+        out = df.groupby("fuente", as_index=False)["capex_musd"].sum().rename(
+            columns={"fuente": "label", "capex_musd": "value"}
+        )
+        return out
+
+    if query_type == "cobertura":
+        cov = cobertura.merge(proyectos, on="id_proyecto", how="left")
+        ids = _ids_en_anio()
+        if ids is not None:
+            cov = cov[cov["id_proyecto"].isin(ids)]
+        if query_energia:
+            cov = cov[cov["id_tipo"].astype(str) == query_energia]
+        out = cov.groupby("depto", as_index=False)["usuarios"].sum().rename(
+            columns={"depto": "label", "usuarios": "value"}
+        )
+        return out
+
+    if query_type == "eficiencia":
+        cov = cobertura.merge(proyectos, on="id_proyecto", how="left")
+        ids = _ids_en_anio()
+        if ids is not None:
+            cov = cov[cov["id_proyecto"].isin(ids)]
+        if query_energia:
+            cov = cov[cov["id_tipo"].astype(str) == query_energia]
+        out = cov[["nombre", "disponibilidad_pct"]].rename(
+            columns={"nombre": "label", "disponibilidad_pct": "value"}
+        )
         return out
 
     return pd.DataFrame([{"label": "Dato 1", "value": 100.0}, {"label": "Dato 2", "value": 200.0}])
@@ -1145,12 +1457,16 @@ def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
     energia_label = st.selectbox("Filtrar por tipo de energía", list(energia_options.keys()), index=0)
     query_energia = energia_options[energia_label]
 
-    query_anio = st.selectbox("Año", [2024, 2023, 2022, 2021, 2020, 2019], index=0)
+    anios_q = sorted(d["costos"]["anio"].dropna().unique().tolist(), reverse=True)
+    query_anio = int(st.selectbox("Año", anios_q, index=0)) if anios_q else 2024
 
     if st.button("🔍 Ejecutar consulta", type="primary", use_container_width=False):
-        st.session_state["consulta_result"] = _execute_query_mock(d, query_type=query_type, query_energia=query_energia)
+        st.session_state["consulta_result"] = _execute_query_mock(
+            d, query_type=query_type, query_energia=query_energia, query_anio=query_anio
+        )
         st.session_state["consulta_sql"] = _generate_query_string(query_type, query_energia, query_anio)
         st.session_state["consulta_query_type"] = query_type
+        st.session_state["consulta_query_anio"] = query_anio
 
     result_df: pd.DataFrame | None = st.session_state.get("consulta_result")
     sql: str | None = st.session_state.get("consulta_sql")
@@ -1169,7 +1485,7 @@ def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
         .encode(
             x=alt.X("label:N", title=None),
             y=alt.Y("value:Q", title="Valor"),
-            color=alt.Color("label:N", legend=None, scale=_energy_color_scale()),
+            color=alt.Color("label:N", legend=None, scale=alt.Scale(scheme="tableau10")),
             tooltip=["label:N", alt.Tooltip("value:Q", title="Valor")],
         )
         .properties(height=320, title="Visualización de resultados")
@@ -1179,9 +1495,10 @@ def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
     q_executed = str(st.session_state.get("consulta_query_type") or "")
     _chart_interp(
         _interp_consulta_resultado(result_df, q_executed),
-        "**Qué muestra:** barras construidas desde las columnas **`label`** y **`value`** devueltas por el motor en memoria.\n\n"
-        "**Cómo leerlo:** si `label` es una **fuente** o **proyecto** conocido en el modelo, el color intenta seguir la convención del tablero.\n\n"
-        "**Matices:** sustituya el mock por ejecución parametrizada sobre **`MatrizEnergeticaCol`** para resultados operativos.",
+        "**Qué muestra:** barras desde **`label`** y **`value`** del motor en memoria (filtro por año alineado al ejecutar).\n\n"
+        "**Cómo leerlo:** palette **Tableau 10** para distinguir categorías arbitrarias (p. ej. departamentos).\n\n"
+        "**Matices:** conecte a **`MatrizEnergeticaCol`** para resultados operativos y SQL productivo.",
+        export_key="consultas_resultado",
     )
 
 

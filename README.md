@@ -1,5 +1,7 @@
 # ⚡ EnergyTransitionColombia
 
+Proyecto desarrollado en el marco del **curso de Análisis de Datos Integrador** de **Talento Tech**.
+
 ## 🧑‍🤝‍🧑 Equipo y contexto
 
 - Claudia Arroyave  
@@ -7,18 +9,15 @@
 - Jesus Garcia  
 - Maria Alejandra Colorado Ríos  
 
-Proyecto desarrollado en el marco del **curso de Análisis de Datos Integrador** de **Talento Tech**.
-
 ## 🎯 Problema que aborda el proyecto
 
 ### Identificación de la problemática
 
-
-**Problema específico elegido:** caracterizar cómo evoluciona la **diversificación de la matriz energética colombiana** en el plano analítico—comparando **hídrica, solar, eólica y geotérmica**—cruzando **generación**, **demanda/cobertura**, **costos e inversión** y **emisiones**, con una lectura útil para discusión técnica y apoyo a decisiones. El cuaderno `notebook/Transicion_Energetica.ipynb` concentra ese análisis sobre una serie **sintética 2020–2026**; el SQL y el Streamlit usan el **mismo esquema** pero cargas de muestra con **ventanas concretas** (ver **Ventana temporal por capa** más abajo).
+**Problema específico elegido:** caracterizar cómo evoluciona la **diversificación de la matriz energética colombiana** en el plano analítico—comparando **hídrica, solar, eólica y geotérmica**—cruzando **generación**, **demanda/cobertura**, **costos e inversión** y **emisiones**, con una lectura útil para discusión técnica y apoyo a decisiones. El cuaderno `notebook/Transicion_Energetica.ipynb`, el SQL y el Streamlit concentran ese análisis sobre una serie **sintética 2020–2026**.
 
 ### Qué analiza el notebook (resumen)
 
-En `Transicion_Energetica.ipynb` el equipo:
+En `Transicion_Energetica.ipynb` se realizan las siguientes etapas:
 
 1. **Construye el dataset** de trabajo con variables por tecnología y tiempo (generación, demanda, cobertura, costos, inversión, emisiones).  
 2. **Controla calidad** (estructura, tipos, faltantes, rangos y coherencia entre magnitudes).  
@@ -26,21 +25,21 @@ En `Transicion_Energetica.ipynb` el equipo:
 4. Aplica **ingeniería de variables**: participación en generación, crecimiento interanual, variación de generación, costo por unidad generada, intensidad de emisiones, ecoeficiencia, emisiones evitadas vs. referencia, **índice de diversificación** de la matriz, entre otros.  
 5. Presenta **síntesis ejecutiva**, **visualización analítica**, **hallazgos** y **conclusiones**, más una sección de **extensiones** metodológicas.
 
-Los datos del notebook son **sintéticos** (inspirados en órdenes de magnitud y tendencias tipo XM / UPME / SGC); los hallazgos **cualitativos del método** son transferibles; las cifras **no** deben citarse como estadística oficial sin sustituir por fuentes primarias.
+Los datos del notebook son **sintéticos** (inspirados en órdenes de magnitud y tendencias tipo XM / UPME / SGC); los hallazgos **cualitativos del método** son transferibles.
 
 ### Pregunta que amarra capas (notebook, SQL, Streamlit)
 
 > ¿Cómo se compone la **capacidad y la economía** de los proyectos por **tipo de energía**, y qué patrón emerge al cruzar **costos** con **cobertura/disponibilidad** y **regulación**?
 
-**Límite analítico:** correlación no implica causalidad; datos demo/mock implican validar conclusiones con base operativa real cuando se despliegue en producción.
+
 
 ### Ventana temporal por capa
 
 | Capa | Qué cubre hoy en el repo |
 |------|---------------------------|
-| **Notebook** (`Transicion_Energetica.ipynb`) | Horizonte **2020–2026** con datos **sintéticos** (metodología y escenarios). No debe confundirse con los años cargados en el SQL. |
-| **MySQL** (`Matriz_Energetica_Colombia_Schema_y_Datos_2020_2025.sql`) | `Fact_Generacion`: fechas **2020-01-01** a **2020-05-21** (diaria). `Fact_Costos`: año **2024** únicamente en los INSERT actuales. El nombre del archivo conserva la etiqueta **2020_2025** como convención del entregable. |
-| **Streamlit** | Mock alineado al SQL para costos y dimensiones: **2024** en costos; sin visualización aún de la serie de generación. |
+| **Notebook** (`Transicion_Energetica.ipynb`) | Horizonte **2020–2025** con datos **sintéticos** (metodología y escenarios). |
+| **MySQL** (`Matriz_Energetica_Colombia_Schema_y_Datos_2020_2025.sql`) | `Fact_Generacion`: fechas **2020-01-01** a **2020-05-21** (diaria). `Fact_Costos`: año **2024**  |
+| **Streamlit** | Mock alineado al SQL para costos y dimensiones: **2024** en costos |
 
 El proyecto organiza el trabajo en **tres capas**: (1) **Notebook** — EDA e indicadores derivados en `notebook/Transicion_Energetica.ipynb`; (2) **MySQL** — esquema dimensional, datos y consultas reproducibles en `database/` (incluye generación diaria e impacto ambiental en tablas de hechos); (3) **Streamlit** — dashboard para filtrar y visualizar proyectos, costos (LCOE, CAPEX, OPEX), cobertura, disponibilidad y regulación.
 
@@ -124,7 +123,6 @@ Los datos mostrados en la UI se obtienen de `_load_data()` y se exponen como `pa
 
 Convención de color por **tipo de energía** (misma semántica en gráficos que la usan): implementada con `ENERGY_*`, `_energy_color_scale()` y dominio alineado a las etiquetas de `Dim_TipoEnergia` / mock.
 
-**Estado actual respecto a MySQL:** la app **no lee todavía** `MatrizEnergeticaCol` en runtime; `Fact_Generacion` e `Fact_ImpactoAmbiental` **no** están enlazadas en la interfaz. El siguiente paso de ingeniería de datos es sustituir o enriquecer `_load_data()` con consultas parametrizadas (por ejemplo SQLAlchemy + `st.secrets`) manteniendo los mismos contratos de columnas que esperan `_view_*`.
 
 ---
 
