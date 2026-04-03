@@ -1,4 +1,6 @@
--- Análisis de la diversificación de la matriz energética en Colombia (2020-2025)
+-- Matriz energética Colombia: esquema + datos de muestra.
+-- Fact_Generacion: fechas 2020-01-01 a 2020-05-21 (serie diaria). Fact_Costos: anio 2024.
+-- El nombre del archivo conserva el rango 2020_2025 como convención del proyecto académico.
 CREATE DATABASE IF NOT EXISTS MatrizEnergeticaCol;
 USE MatrizEnergeticaCol;
 

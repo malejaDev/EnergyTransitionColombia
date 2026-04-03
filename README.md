@@ -1,15 +1,46 @@
 # ⚡ EnergyTransitionColombia
 
-## 🎯 Qué problema aborda el proyecto
+## 🧑‍🤝‍🧑 Equipo y contexto
 
-La transición energética exige comparar **tecnologías**, **escala**, **economía del proyecto** y **resultados operativos/cobertura** sin mezclar semánticas ni visualizaciones inconsistentes. Este repositorio documenta y materializa un flujo de trabajo de **ciencia de datos aplicada**: definir métricas, alinear datos en un esquema relacional, explorar y comunicar resultados en un producto consumible.
+- Claudia Arroyave  
+- Michely Muñoz  
+- Jesus Garcia  
+- Maria Alejandra Colorado Ríos  
 
-Pregunta rectora que guía el diseño del tablero y de las consultas SQL:
+Proyecto desarrollado en el marco del **curso de Análisis de Datos Integrador** de **Talento Tech**.
 
-> ¿Cómo se compone la capacidad y la economía de los proyectos por **tipo de energía**, y qué se observa al cruzar **costos** con **cobertura/disponibilidad** y **regulación**?
+## 🎯 Problema que aborda el proyecto
 
-**Hipótesis exploratorias** (contrastables cuando los datos provengan de la base y no solo del mock): no siempre mayor capacidad implica menor LCOE; las tecnologías forman clusters distintos en el espacio CAPEX–LCOE; la lectura de cobertura debe contextualizarse con regulación y portafolio. **Límites**: correlación no implica causalidad; con datos académicos/demo las conclusiones son sobre metodología y producto, no necesariamente sobre el sistema eléctrico nacional completo.
+### Identificación de la problemática
 
+
+**Problema específico elegido:** caracterizar cómo evoluciona la **diversificación de la matriz energética colombiana** en el plano analítico—comparando **hídrica, solar, eólica y geotérmica**—cruzando **generación**, **demanda/cobertura**, **costos e inversión** y **emisiones**, con una lectura útil para discusión técnica y apoyo a decisiones. El cuaderno `notebook/Transicion_Energetica.ipynb` concentra ese análisis sobre una serie **sintética 2020–2026**; el SQL y el Streamlit usan el **mismo esquema** pero cargas de muestra con **ventanas concretas** (ver **Ventana temporal por capa** más abajo).
+
+### Qué analiza el notebook (resumen)
+
+En `Transicion_Energetica.ipynb` el equipo:
+
+1. **Construye el dataset** de trabajo con variables por tecnología y tiempo (generación, demanda, cobertura, costos, inversión, emisiones).  
+2. **Controla calidad** (estructura, tipos, faltantes, rangos y coherencia entre magnitudes).  
+3. **Agrega** a una base **año × tipo de energía** para analizar tendencias con menos ruido.  
+4. Aplica **ingeniería de variables**: participación en generación, crecimiento interanual, variación de generación, costo por unidad generada, intensidad de emisiones, ecoeficiencia, emisiones evitadas vs. referencia, **índice de diversificación** de la matriz, entre otros.  
+5. Presenta **síntesis ejecutiva**, **visualización analítica**, **hallazgos** y **conclusiones**, más una sección de **extensiones** metodológicas.
+
+Los datos del notebook son **sintéticos** (inspirados en órdenes de magnitud y tendencias tipo XM / UPME / SGC); los hallazgos **cualitativos del método** son transferibles; las cifras **no** deben citarse como estadística oficial sin sustituir por fuentes primarias.
+
+### Pregunta que amarra capas (notebook, SQL, Streamlit)
+
+> ¿Cómo se compone la **capacidad y la economía** de los proyectos por **tipo de energía**, y qué patrón emerge al cruzar **costos** con **cobertura/disponibilidad** y **regulación**?
+
+**Límite analítico:** correlación no implica causalidad; datos demo/mock implican validar conclusiones con base operativa real cuando se despliegue en producción.
+
+### Ventana temporal por capa
+
+| Capa | Qué cubre hoy en el repo |
+|------|---------------------------|
+| **Notebook** (`Transicion_Energetica.ipynb`) | Horizonte **2020–2026** con datos **sintéticos** (metodología y escenarios). No debe confundirse con los años cargados en el SQL. |
+| **MySQL** (`Matriz_Energetica_Colombia_Schema_y_Datos_2020_2025.sql`) | `Fact_Generacion`: fechas **2020-01-01** a **2020-05-21** (diaria). `Fact_Costos`: año **2024** únicamente en los INSERT actuales. El nombre del archivo conserva la etiqueta **2020_2025** como convención del entregable. |
+| **Streamlit** | Mock alineado al SQL para costos y dimensiones: **2024** en costos; sin visualización aún de la serie de generación. |
 
 El proyecto organiza el trabajo en **tres capas**: (1) **Notebook** — EDA e indicadores derivados en `notebook/Transicion_Energetica.ipynb`; (2) **MySQL** — esquema dimensional, datos y consultas reproducibles en `database/` (incluye generación diaria e impacto ambiental en tablas de hechos); (3) **Streamlit** — dashboard para filtrar y visualizar proyectos, costos (LCOE, CAPEX, OPEX), cobertura, disponibilidad y regulación.
 
@@ -22,14 +53,7 @@ Hoy el **despliegue web** usa **datos mock en memoria** (`streamlit_app.py`) ali
 
 ---
 
-## 🧑‍🤝‍🧑 Equipo y contexto
 
-- Claudia Arroyave  
-- Michely Muñoz  
-- Jesus Garcia  
-- Maria Alejandra Colorado Ríos  
-
-Proyecto desarrollado en el marco del **curso de Análisis de Datos Integrador** de **Talento Tech**.
 
 ---
 
@@ -50,20 +74,11 @@ EnergyTransitionColombia/
 
 ---
 
-## 📓 Cuaderno de análisis (laboratorio de ciencia de datos)
+## 📓 Cuaderno de análisis (`Transicion_Energetica.ipynb`)
 
-En `notebook/Transicion_Energetica.ipynb` está el **hilo analítico principal** del equipo (actualmente **28 celdas**): construcción del dataset de trabajo, control de consistencia, agregación por año y tecnología, **ingeniería de variables** y síntesis previa a visualizaciones.
+El **hilo analítico principal** está descrito arriba, en **Problema que aborda el proyecto → Qué analiza el notebook**. El archivo (≈**28 celdas**) desarrolla además, en secciones propias del cuaderno: **visualización analítica** (§7), **hallazgos principales** (§8), **conclusiones** (§9) y **extensiones metodológicas** (§10).
 
-**Tema y alcance (según el propio cuaderno):** análisis estratégico de la diversificación de la **matriz energética en Colombia (2020–2026)**, con foco en **FNCER (fuentes no convencionales renovables) frente a generación hídrica**, comparando trayectorias de solar, eólica, geotérmica e hídrica en generación, costos, emisiones, participación y diversificación. La fuente declarada en el notebook es un **modelo de datos sintético inspirado en tendencias** de referentes sectoriales (p. ej. XM, UPME, SGC); las conclusiones deben interpretarse en ese marco hasta conectar con datos operativos reales.
-
-**Flujo metodológico resumido en el notebook:**
-
-1. Librerías y configuración visual.  
-2. Construcción del dataset (periodo y variables para generación, demanda, cobertura, costos, inversión, emisiones por tecnología).  
-3. Revisión inicial: estructura, tipos, faltantes, rangos y coherencia entre magnitudes.  
-4. Base analítica agregada por **año × tipo de energía**.  
-5. Indicadores derivados (entre otros): participación relativa en generación, crecimiento interanual, variación absoluta de generación, costo por unidad generada, intensidad de emisiones, índice de ecoeficiencia, emisiones evitadas vs. referencia, índice de diversificación de la matriz.  
-6. Síntesis ejecutiva preliminar y bloques de visualización analítica.
+**Datos:** el cuaderno declara un **conjunto sintético** alineado a **tendencias** de referentes sectoriales (p. ej. XM, UPME, SGC). Úsalo para **método e integración de variables**; sustituye por datos oficiales para inferencia sobre el sistema real.
 
 **Copia publicada (Google Drive / entorno Colab):** puedes abrir o descargar el cuaderno desde [este enlace](https://drive.google.com/file/d/1kWZn9wSRqu6PjTfnsmNb98mSBqC7-J6w/view?usp=drive_link) (`Transicion_Energetica.ipynb`). Para máxima reproducibilidad, prioriza la versión versionada en `notebook/` del repositorio y alinea entorno (versiones de librerías) con la que usó el equipo.
 
@@ -73,7 +88,7 @@ En `notebook/Transicion_Energetica.ipynb` está el **hilo analítico principal**
 
 ## 🗄️ Base de datos (MySQL Workbench)
 
-La base **`MatrizEnergeticaCol`** se crea y carga con `database/Matriz_Energetica_Colombia_Schema_y_Datos_2020_2025.sql`. Tablas relevantes:
+La base **`MatrizEnergeticaCol`** se crea y carga con `database/Matriz_Energetica_Colombia_Schema_y_Datos_2020_2025.sql` (nombre histórico; el contenido actual de `Fact_Generacion` y `Fact_Costos` sigue la tabla **Ventana temporal por capa**). Tablas relevantes:
 
 | Rol | Tablas |
 |-----|--------|

@@ -170,7 +170,7 @@ def _format_currency_es_co(amount: float, digits: int = 2) -> str:
     return f"${amount:,.{digits}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def _page_header(title: str, subtitle: str = "Transición Energética 2019-2025") -> None:
+def _page_header(title: str, subtitle: str = "Demostración con datos alineados al SQL (costos 2024)") -> None:
     st.markdown(
         f"""
         <div class="neo-flat" style="padding: 1rem 1.25rem; margin-bottom: 0.9rem;">
@@ -235,9 +235,9 @@ def _view_inicio() -> None:
             EnergyTrans Colombia
           </div>
           <div style="color: var(--color-text-secondary); font-size: 14px; line-height: 1.5;">
-            Este proyecto consolida indicadores clave para explorar la <b>Transición Energética en Colombia (2019–2025)</b>:
-            proyectos, costos (LCOE/CAPEX/OPEX), cobertura y marco regulatorio. La app está diseñada para navegación rápida,
-            comparaciones visuales y consultas exploratorias.
+            Este tablero usa la <b>misma muestra que el script MySQL</b>: costos con corte <b>2024</b> y dimensiones de proyectos/cobertura.
+            La serie diaria de <b>Fact_Generacion</b> del SQL (2020-01-01 a 2020-05-21) aún <b>no</b> se visualiza aquí; el cuaderno
+            <code>Transicion_Energetica.ipynb</code> trabaja un horizonte <b>2020–2026 sintético</b> aparte. Navegación rápida, comparaciones visuales y consultas demo.
           </div>
           <div style="margin-top: 10px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.5;">
             Realizado para el <b>curso de Análisis de Datos Integrador</b> de <b>Talento Tech</b>.
@@ -332,7 +332,7 @@ def _view_inicio() -> None:
               <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.6;">
                 - Los valores actuales son demostrativos (mock).<br/>
                 - El estándar de colores por tipo de energía se mantiene en toda la app.<br/>
-                - Si conectas datos reales, la vista de Costos habilitará más años automáticamente.
+                - La vista Costos ya toma los años presentes en el mock (hoy solo 2024, como en Fact_Costos del SQL).
               </div>
             </div>
             """,
@@ -347,6 +347,8 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
     cobertura = d["cobertura"]
 
     capacidad_total = float(proyectos["capacidad_mw"].sum())
+    ren_cap = float(proyectos.loc[proyectos["id_tipo"].isin([2, 3, 4]), "capacidad_mw"].sum())
+    fncer_pct = round(100.0 * ren_cap / capacidad_total, 1) if capacidad_total else 0.0
     inversion_total = float(costos["capex_musd"].sum())
     usuarios_total = int(cobertura["usuarios"].sum())
     lcoe_promedio = float(costos["lcoe_usd_mwh"].mean())
@@ -385,19 +387,19 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
 
     r1, r2, r3 = st.columns(3)
     with r1:
-        stat_card("🏗️", f"{int(len(proyectos))}", "Proyectos Activos", "↑ 25% vs 2019", positive=True)
+        stat_card("🏗️", f"{int(len(proyectos))}", "Proyectos en la muestra", "Dataset demo", positive=True)
     with r2:
-        stat_card("⚡", f"{capacidad_total/1000:.1f} GW", "Capacidad Total", "↑ 15% renovable", positive=True)
+        stat_card("⚡", f"{capacidad_total/1000:.1f} GW", "Capacidad total (muestra)", "Suma MW en proyectos demo", positive=True)
     with r3:
-        stat_card("💰", f"${inversion_total/1000:.1f}B", "Inversión Total", "↑ 40% privado", positive=True)
+        stat_card("💰", f"${inversion_total/1000:.1f}B", "CAPEX agregado", "Suma Fact_Costos / mock (2024)", positive=True)
 
     r4, r5, r6 = st.columns(3)
     with r4:
         stat_card("👥", f"{usuarios_total/1_000_000:.1f}M", "Usuarios Beneficiados", "98.5% disponibilidad", positive=True)
     with r5:
-        stat_card("📉", f"${lcoe_promedio:.2f}", "LCOE Promedio", "↓ 12% vs 2019", positive=False)
+        stat_card("📉", f"${lcoe_promedio:.2f}", "LCOE promedio (2024)", "Mismo año que Fact_Costos", positive=True)
     with r6:
-        stat_card("🌿", "73%", "Energía Renovable", "Meta 2025: 80%", positive=True)
+        stat_card("🌿", f"{fncer_pct}%", "Capacidad FNCER", "Solar+eólica+geoterma / total MW", positive=True)
 
     st.markdown("### Mix energético Colombia")
     capacidad_por_tipo = (
@@ -919,7 +921,8 @@ def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
     energia_label = st.selectbox("Filtrar por tipo de energía", list(energia_options.keys()), index=0)
     query_energia = energia_options[energia_label]
 
-    query_anio = st.selectbox("Año", [2024, 2023, 2022, 2021, 2020, 2019], index=0)
+    anios_demo = sorted({int(x) for x in d["costos"]["anio"].dropna().unique().tolist()}, reverse=True)
+    query_anio = st.selectbox("Año (Fact_Costos / mock)", anios_demo or [2024], index=0)
 
     if st.button("🔍 Ejecutar consulta", type="primary", use_container_width=False):
         st.session_state["consulta_result"] = _execute_query_mock(d, query_type=query_type, query_energia=query_energia)
@@ -984,7 +987,7 @@ def main() -> None:
         st.error("Vista no reconocida.")
 
     st.divider()
-    st.caption("© 2024 EnergyTrans Colombia | Transición Energética 2019-2025")
+    st.caption("© 2024 EnergyTrans Colombia | Muestra alineada al SQL: costos 2024; generación en BD 2020 (parcial), no mostrada aún")
 
 
 if __name__ == "__main__":
