@@ -1,16 +1,5 @@
 # ⚡ EnergyTransitionColombia
 
-El proyecto organiza el trabajo en **tres capas**: (1) **Notebook** — EDA e indicadores derivados en `notebook/Transicion_Energetica.ipynb`; (2) **MySQL** — esquema dimensional, datos y consultas reproducibles en `database/` (incluye generación diaria e impacto ambiental en tablas de hechos); (3) **Streamlit** — dashboard para filtrar y visualizar proyectos, costos (LCOE, CAPEX, OPEX), cobertura, disponibilidad y regulación.
-
-Hoy el **despliegue web** usa **datos mock en memoria** (`streamlit_app.py`) alineados al modelo; la **fuente analítica “fuerte”** sigue siendo el **SQL + el cuaderno** (calidad, trazabilidad y narrativa). Más abajo están el detalle de cada capa.
-
-| | |
-|---|--|
-| **App en producción** | [energytransitioncolombia.streamlit.app](https://energytransitioncolombia.streamlit.app/) |
-| **Entrada del dashboard** | `EnergyTransitionColombia/streamlit_app.py` |
-
----
-
 ## 🎯 Qué problema aborda el proyecto
 
 La transición energética exige comparar **tecnologías**, **escala**, **economía del proyecto** y **resultados operativos/cobertura** sin mezclar semánticas ni visualizaciones inconsistentes. Este repositorio documenta y materializa un flujo de trabajo de **ciencia de datos aplicada**: definir métricas, alinear datos en un esquema relacional, explorar y comunicar resultados en un producto consumible.
@@ -20,6 +9,16 @@ Pregunta rectora que guía el diseño del tablero y de las consultas SQL:
 > ¿Cómo se compone la capacidad y la economía de los proyectos por **tipo de energía**, y qué se observa al cruzar **costos** con **cobertura/disponibilidad** y **regulación**?
 
 **Hipótesis exploratorias** (contrastables cuando los datos provengan de la base y no solo del mock): no siempre mayor capacidad implica menor LCOE; las tecnologías forman clusters distintos en el espacio CAPEX–LCOE; la lectura de cobertura debe contextualizarse con regulación y portafolio. **Límites**: correlación no implica causalidad; con datos académicos/demo las conclusiones son sobre metodología y producto, no necesariamente sobre el sistema eléctrico nacional completo.
+
+
+El proyecto organiza el trabajo en **tres capas**: (1) **Notebook** — EDA e indicadores derivados en `notebook/Transicion_Energetica.ipynb`; (2) **MySQL** — esquema dimensional, datos y consultas reproducibles en `database/` (incluye generación diaria e impacto ambiental en tablas de hechos); (3) **Streamlit** — dashboard para filtrar y visualizar proyectos, costos (LCOE, CAPEX, OPEX), cobertura, disponibilidad y regulación.
+
+Hoy el **despliegue web** usa **datos mock en memoria** (`streamlit_app.py`) alineados al modelo; la **fuente analítica “fuerte”** sigue siendo el **SQL + el cuaderno** (calidad, trazabilidad y narrativa). Más abajo están el detalle de cada capa.
+
+| | |
+|---|--|
+| **App en producción** | [energytransitioncolombia.streamlit.app](https://energytransitioncolombia.streamlit.app/) |
+| **Entrada del dashboard** | `EnergyTransitionColombia/streamlit_app.py` |
 
 ---
 
