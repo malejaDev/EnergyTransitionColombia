@@ -20,10 +20,206 @@ def _energy_color_scale() -> alt.Scale:
     return alt.Scale(domain=ENERGY_COLOR_DOMAIN, range=ENERGY_COLOR_RANGE)
 
 
-def _chart_interp(text: str) -> None:
-    """Interpretación breve para el usuario (lectura tipo científico de datos)."""
+def _fmt_qty_es(value: float, decimals: int = 1) -> str:
+    """Cantidad con separador de miles estilo es-CO."""
+    s = f"{value:,.{decimals}f}"
+    return s.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _interp_dominant_share(
+    df: pd.DataFrame,
+    cat_col: str,
+    val_col: str,
+    intro_sentence: str,
+    unit: str,
+    total_unit: str | None = None,
+) -> str:
+    """Categoría de mayor valor y participación sobre el total (p. ej. mix por fuente)."""
+    tu = total_unit or unit
+    if df is None or df.empty:
+        return "_No hay datos en el conjunto mostrado para generar el resumen._"
+    dd = df[[cat_col, val_col]].dropna(subset=[val_col]).copy()
+    if dd.empty:
+        return "_No hay valores numéricos válidos en la gráfica._"
+    tot = float(dd[val_col].sum())
+    if tot <= 0:
+        return "_La suma del indicador es cero o no positiva; no se calcula participación relativa._"
+    idx = dd[val_col].idxmax()
+    row = dd.loc[idx]
+    cat = str(row[cat_col])
+    val = float(row[val_col])
+    pct = 100.0 * val / tot
+    return (
+        f"{intro_sentence} **{cat}**, con **~{_fmt_qty_es(val)} {unit}**, "
+        f"lo que representa aproximadamente el **{_fmt_qty_es(pct)}%** del total "
+        f"(**~{_fmt_qty_es(tot)} {tu}** en **{len(dd)}** categorías en pantalla)."
+    )
+
+
+def _interp_min_max_mean_rows(df: pd.DataFrame, cat_col: str, val_col: str, metric_label: str, unit: str) -> str:
+    """Rango y promedio cuando cada fila es una categoría (p. ej. LCOE por tecnología)."""
+    if df is None or df.empty:
+        return "_No hay datos para resumir._"
+    d = df[[cat_col, val_col]].dropna(subset=[val_col]).copy()
+    if d.empty:
+        return "_Sin valores numéricos._"
+    if len(d) == 1:
+        r = d.iloc[0]
+        return (
+            f"Solo figura **{r[cat_col]}** con **~{_fmt_qty_es(float(r[val_col]))} {unit}**; "
+            "agregue más categorías en los datos para comparar rangos."
+        )
+    i_max = d[val_col].idxmax()
+    i_min = d[val_col].idxmin()
+    rmax, rmin = d.loc[i_max], d.loc[i_min]
+    mu = float(d[val_col].mean())
+    return (
+        f"- **Mayor {metric_label}:** **{rmax[cat_col]}** (~{_fmt_qty_es(float(rmax[val_col]))} {unit}).\n"
+        f"- **Menor {metric_label}:** **{rmin[cat_col]}** (~{_fmt_qty_es(float(rmin[val_col]))} {unit}).\n"
+        f"- **Promedio simple** entre las {len(d)} categorías mostradas: ~{_fmt_qty_es(mu)} {unit}."
+    )
+
+
+def _interp_costos_proyecto_bars(df: pd.DataFrame, val_col: str, label_metric: str, unit: str, anio: object) -> str:
+    """Ranking sobre `nombre` para Costos (respeta filtros y multiselect)."""
+    if df is None or df.empty:
+        return "_Sin proyectos bajo los filtros actuales; amplíe la selección o ajuste año/tipo._"
+    need = {"nombre", val_col}
+    if not need.issubset(df.columns):
+        return "_Faltan columnas esperadas en el conjunto filtrado._"
+    d = df[list(need)].dropna(subset=[val_col]).copy()
+    if d.empty:
+        return "_No hay valores numéricos para el indicador en la gráfica._"
+    i_max = d[val_col].idxmax()
+    i_min = d[val_col].idxmin()
+    rmax, rmin = d.loc[i_max], d.loc[i_min]
+    mu = float(d[val_col].mean())
+    yr = f" (año **{anio}**)" if anio is not None and str(anio) != "" else ""
+    return (
+        f"Con **{len(d)}** proyecto(s) en pantalla{yr}:\n\n"
+        f"- **Mayor {label_metric}:** **{rmax['nombre']}** (~{_fmt_qty_es(float(rmax[val_col]))} {unit}).\n"
+        f"- **Menor {label_metric}:** **{rmin['nombre']}** (~{_fmt_qty_es(float(rmin[val_col]))} {unit}).\n"
+        f"- **Promedio** del conjunto filtrado: ~{_fmt_qty_es(mu)} {unit}."
+    )
+
+
+def _interp_capex_opex_cross(df: pd.DataFrame) -> str:
+    if df is None or df.empty:
+        return "_No hay proyectos con costos para comparar CAPEX y OPEX._"
+    need = {"nombre", "capex_musd", "opex_musd"}
+    if not need.issubset(df.columns):
+        return "_Datos incompletos para CAPEX/OPEX._"
+    d = df[list(need)].dropna(subset=["capex_musd", "opex_musd"]).copy()
+    if d.empty:
+        return "_Sin pares CAPEX/OPEX válidos._"
+    ic = d["capex_musd"].idxmax()
+    rc = d.loc[ic]
+    io = d["opex_musd"].idxmax()
+    ro = d.loc[io]
+    return (
+        f"- **Mayor CAPEX:** **{rc['nombre']}** (~{_fmt_qty_es(float(rc['capex_musd']))} M USD de inversión; "
+        f"OPEX ~{_fmt_qty_es(float(rc['opex_musd']))} M USD).\n"
+        f"- **Mayor OPEX:** **{ro['nombre']}** (~{_fmt_qty_es(float(ro['opex_musd']))} M USD operativo; "
+        f"CAPEX ~{_fmt_qty_es(float(ro['capex_musd']))} M USD)."
+    )
+
+
+def _interp_disponibilidad(df: pd.DataFrame) -> str:
+    if df is None or df.empty or "disponibilidad_pct" not in df.columns:
+        return "_No hay serie de disponibilidad para analizar._"
+    s = df["disponibilidad_pct"].dropna()
+    if s.empty:
+        return "_Disponibilidad sin valores numéricos._"
+    mn, mx, mu = float(s.min()), float(s.max()), float(s.mean())
+    std = float(s.std(ddof=0)) if len(s) > 1 else 0.0
+    if mx - mn < 0.05:
+        return (
+            f"En la muestra, la **disponibilidad** es casi **uniforme** "
+            f"(aprox. **{_fmt_qty_es(mu, 2)}%** de media; rango **{_fmt_qty_es(mx - mn, 2)}** puntos entre mínimo y máximo)."
+        )
+    i_max = s.idxmax()
+    i_min = s.idxmin()
+    nom = df["nombre"] if "nombre" in df.columns else pd.Series(index=s.index, dtype=object)
+    hi = nom.loc[i_max] if i_max in nom.index else "—"
+    lo = nom.loc[i_min] if i_min in nom.index else "—"
+    return (
+        f"- **Máximo:** **{hi}** (~{_fmt_qty_es(mx, 2)}%).\n"
+        f"- **Mínimo:** **{lo}** (~{_fmt_qty_es(mn, 2)}%).\n"
+        f"- **Media** (~{_fmt_qty_es(mu, 2)}%) y **desv. típ.** ~{_fmt_qty_es(std, 3)} puntos ({len(s)} proyectos)."
+    )
+
+
+def _interp_regulacion_chart(df: pd.DataFrame) -> str:
+    if df is None or df.empty:
+        return "_Sin filas de regulación._"
+    if not {"ley", "pct_ahorro"}.issubset(df.columns):
+        return "_Columnas normativas ausentes._"
+    d = df[["ley", "pct_ahorro"]].dropna(subset=["pct_ahorro"]).copy()
+    if d.empty:
+        return "_Porcentajes de ahorro no numéricos._"
+    tot = float(d["pct_ahorro"].sum())
+    idx = d["pct_ahorro"].idxmax()
+    r = d.loc[idx]
+    if tot > 0:
+        pct = 100.0 * float(r["pct_ahorro"]) / tot
+        share_txt = f"aprox. **{_fmt_qty_es(pct)}%** del total de porcentajes mostrados en el gráfico (suma **{_fmt_qty_es(tot, 1)}** pp entre leyes)."
+    else:
+        share_txt = "la suma de porcentajes es cero; revise los datos."
+    return (
+        f"La ley con mayor **% de ahorro** declarado en el dataset es **{r['ley']}** "
+        f"(**{_fmt_qty_es(float(r['pct_ahorro']), 1)}** puntos porcentuales), "
+        f"{share_txt}"
+    )
+
+
+def _interp_consulta_resultado(result_df: pd.DataFrame, query_type: str) -> str:
+    if result_df is None or result_df.empty:
+        return "_Ejecute una consulta o revise filtros: no hay resultado en memoria._"
+    if not {"label", "value"}.issubset(result_df.columns):
+        return "_El resultado no tiene el formato `label` / `value` esperado por el mock._"
+    d = result_df.dropna(subset=["value"]).copy()
+    if d.empty:
+        return "_Valores numéricos vacíos en el resultado._"
+    labels = set(d["label"].astype(str).str.strip())
+    if labels <= {"Dato 1", "Dato 2"}:
+        return (
+            "_Este tipo de consulta aún devuelve un **resultado ilustrativo** en el motor mock. "
+            "Conéctelo a **MatrizEnergeticaCol** para magnitudes reales._"
+        )
+    tot = float(d["value"].sum())
+    idx = d["value"].idxmax()
+    r = d.loc[idx]
+    lbl, val = str(r["label"]), float(r["value"])
+    if query_type == "capacidad" and tot > 0:
+        pc = 100.0 * val / tot
+        return (
+            f"**{lbl}** aporta la mayor **capacidad agregada** (~{_fmt_qty_es(val)} MW), "
+            f"alrededor del **{_fmt_qty_es(pc)}%** del subtotal mostrado (~{_fmt_qty_es(tot)} MW, **{len(d)}** categorías)."
+        )
+    if query_type == "lcoe" and len(d) > 1:
+        i_min = d["value"].idxmin()
+        r0 = d.loc[i_min]
+        return (
+            f"LCOE **medio** por tecnología en el mock: va de ~{_fmt_qty_es(float(r0['value']))} USD/MWh (**{r0['label']}**, más bajo) "
+            f"a ~{_fmt_qty_es(float(r['value']))} USD/MWh (**{lbl}**, más alto) sobre **{len(d)}** fuentes."
+        )
+    if tot > 0 and tot == tot:  # not nan
+        pc = 100.0 * val / tot
+        return (
+            f"**{lbl}** concentra el **valor máximo** (~{_fmt_qty_es(val)}), "
+            f"~**{_fmt_qty_es(pc)}%** de la suma del resultado (~{_fmt_qty_es(tot)}) en **{len(d)}** filas."
+        )
+    return f"Valor **máximo** en **{lbl}**: ~{_fmt_qty_es(val)} (unidad según tipo de consulta)."
+
+
+def _chart_interp(resumen_datos: str, notas_metodologicas: str = "") -> None:
+    """Resumen calculado a partir del dataframe de la gráfica + guía metodológica opcional."""
     with st.expander("📌 Interpretación", expanded=False):
-        st.markdown(text)
+        st.markdown("##### Resumen automático")
+        st.markdown(resumen_datos)
+        if notas_metodologicas.strip():
+            st.markdown("##### Lectura metodológica")
+            st.markdown(notas_metodologicas)
 
 
 def _inject_global_css() -> None:
@@ -439,9 +635,17 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
         )
         st.altair_chart(chart, use_container_width=True)
         _chart_interp(
-            "**Qué muestra:** participación de cada **tecnología** en la **capacidad instalada** (MW agregados).\n\n"
-            "**Cómo leerlo:** el ángulo de cada sector es proporcional a la capacidad; compara **mix** relativo, no volumen absoluto del sistema país.\n\n"
-            "**Matices:** proyectos grandes (p. ej. hidro) pueden dominar el pastel aunque otras tecnologías crezcan en número de plantas."
+            _interp_dominant_share(
+                capacidad_por_tipo,
+                "fuente",
+                "capacidad_mw_total",
+                "La fuente con mayor **capacidad instalada** en los proyectos mostrados es",
+                "MW",
+                "MW",
+            ),
+            "**Qué muestra:** participación por **tecnología** en **MW** agregados al cierre de la vista.\n\n"
+            "**Cómo leerlo:** el ángulo de cada sector es proporcional al subtotal de MW; refleja el **mix** de esta muestra, no el sistema país completo.\n\n"
+            "**Matices:** unidades grandes (p. ej. hidro) pueden dominar el pastel aunque existan más plantas de otras tecnologías.",
         )
 
     with col_right:
@@ -458,9 +662,10 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
         )
         st.altair_chart(chart, use_container_width=True)
         _chart_interp(
-            "**Qué muestra:** **LCOE promedio** (USD/MWh) por **tipo de energía** en el conjunto de proyectos con costo registrado.\n\n"
-            "**Cómo leerlo:** barras más altas implican **mayor costo nivelado** unitario en esta muestra; el color sigue la convención por tecnología.\n\n"
-            "**Matices:** es un **promedio simple** por fuente; no pondera por generación ni por tamaño hasta que se use un factor de ponderación explícito."
+            _interp_min_max_mean_rows(lcoe_por_tipo, "fuente", "lcoe_promedio", "LCOE promedio", "USD/MWh"),
+            "**Qué muestra:** **LCOE** medio por **tipo** entre proyectos con costo registrado en el mock.\n\n"
+            "**Cómo leerlo:** barras más altas = mayor costo nivelado **por tecnología** en esta agregación.\n\n"
+            "**Matices:** promedio **simple** por fuente (no ponderado por MWh generados hasta definir pesos).",
         )
 
     col_left, col_right = st.columns(2)
@@ -476,9 +681,10 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
         )
         st.altair_chart(chart, use_container_width=True)
         _chart_interp(
-            "**Qué muestra:** para cada **proyecto**, **CAPEX** (azul) y **OPEX** (ámbar) en millones de USD.\n\n"
-            "**Cómo leerlo:** compara **intensidad de inversión** vs. **costo operativo anualizado**; proyectos con CAPEX alto no siempre tienen OPEX proporcionalmente alto.\n\n"
-            "**Matices:** la superposición en una misma escala facilita la comparación visual, pero valores muy distintos entre proyectos pueden comprimir la lectura de los más pequeños."
+            _interp_capex_opex_cross(capex_opex),
+            "**Qué muestra:** **CAPEX** (azul) y **OPEX** (ámbar) en **M USD** por proyecto presente en costos.\n\n"
+            "**Cómo leerlo:** contraste entre **desembolso de inversión** y **gasto operativo**; no hay proporcionalidad esperada por definición.\n\n"
+            "**Matices:** escala compartida puede **comprimir** barras de proyectos pequeños frente a mayores.",
         )
 
     with col_right:
@@ -494,9 +700,17 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
         )
         st.altair_chart(chart, use_container_width=True)
         _chart_interp(
-            "**Qué muestra:** distribución de **usuarios** asociados a cada **proyecto** en el dataset (no es la población de Colombia).\n\n"
-            "**Cómo leerlo:** sectores grandes concentran mayor peso en **cobertura declarada**; identifica qué proyecto arrastra el reparto.\n\n"
-            "**Matices:** no confundir con **demanda energética** ni con cobertura de redes sin definición explícita de la variable."
+            _interp_dominant_share(
+                cobertura_proyecto,
+                "nombre",
+                "usuarios",
+                "El proyecto con mayor peso en **usuarios** (variable de cobertura del mock) es",
+                "usuarios",
+                "usuarios",
+            ),
+            "**Qué muestra:** reparto de **usuarios** por **proyecto** según la tabla de cobertura cargada.\n\n"
+            "**Cómo leerlo:** sectores amplios concentran la mayor parte del subtotal de usuarios **en esta muestra**.\n\n"
+            "**Matices:** no equivale a población nacional ni a demanda eléctrica; depende de la definición operativa en datos.",
         )
 
     st.markdown("### Tipos de energía renovable")
@@ -705,9 +919,10 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
         )
         st.altair_chart(chart, use_container_width=True)
         _chart_interp(
-            "**Qué muestra:** **LCOE** por **proyecto** bajo los filtros activos (año, tecnología, multiselección de proyectos).\n\n"
-            "**Cómo leerlo:** ordena jerárquicamente el **costo unitario** entre plantas comparables; el color refleja la **tecnología**.\n\n"
-            "**Matices:** al filtrar a un solo tipo, todas las barras comparten categoría —el valor está en comparar proyectos dentro de esa tecnología."
+            _interp_costos_proyecto_bars(costos_f, "lcoe_usd_mwh", "LCOE", "USD/MWh", anio_sel),
+            "**Qué muestra:** **LCOE** por **proyecto** bajo filtros (año, tecnología, multiselect).\n\n"
+            "**Cómo leerlo:** compare **costo nivelado** entre plantas; el color es la **tecnología**.\n\n"
+            "**Matices:** filtrando un solo tipo, el contraste es **intra-tecnología**.",
         )
     with col2:
         chart = (
@@ -723,9 +938,10 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
         )
         st.altair_chart(chart, use_container_width=True)
         _chart_interp(
-            "**Qué muestra:** **CAPEX** (inversión) en M USD por proyecto con los mismos filtros que el gráfico de LCOE.\n\n"
-            "**Cómo leerlo:** identifica **escala de desembolso** relativa; suele correlacionar con tamaño (MW) pero no de forma 1:1 por tecnología y sitio.\n\n"
-            "**Matices:** CAPEX elevado sin LCOE proporcionalmente alto puede indicar **vida útil** o **supuestos de generación** distintos en el cálculo de LCOE."
+            _interp_costos_proyecto_bars(costos_f, "capex_musd", "CAPEX", "M USD", anio_sel),
+            "**Qué muestra:** **CAPEX** en **M USD** por proyecto con los mismos filtros que LCOE.\n\n"
+            "**Cómo leerlo:** identifica **escala de inversión** relativa; no implica orden igual al LCOE.\n\n"
+            "**Matices:** CAPEX alto con LCOE moderado puede reflejar **vida útil** u **hipótesis de generación** distintas.",
         )
 
     st.markdown("### Tabla")
@@ -775,9 +991,17 @@ def _view_cobertura(d: dict[str, pd.DataFrame]) -> None:
         )
         st.altair_chart(chart, use_container_width=True)
         _chart_interp(
-            "**Qué muestra:** magnitud de **usuarios** por proyecto; el color indica **tipo de energía**.\n\n"
-            "**Cómo leerlo:** barras altas concentran mayor **alcance en usuarios** dentro de esta muestra.\n\n"
-            "**Matices:** la métrica depende de la definición operativa en datos; para inferencias sectoriales hace falta validar contra fuentes oficiales."
+            _interp_dominant_share(
+                cobertura[["nombre", "usuarios"]],
+                "nombre",
+                "usuarios",
+                "El proyecto con más **usuarios** en esta vista es",
+                "usuarios",
+                "usuarios",
+            ),
+            "**Qué muestra:** **usuarios** por **proyecto** y color por **tipo** de planta.\n\n"
+            "**Cómo leerlo:** barras más altas concentran más peso en la variable de cobertura **de la muestra**.\n\n"
+            "**Matices:** validar definición operativa antes de extrapolar a nivel sectorial.",
         )
     with col2:
         base = alt.Chart(cobertura).encode(
@@ -793,9 +1017,10 @@ def _view_cobertura(d: dict[str, pd.DataFrame]) -> None:
         ).properties(height=320, title="✅ Disponibilidad (%)")
         st.altair_chart(chart, use_container_width=True)
         _chart_interp(
-            "**Qué muestra:** **disponibilidad operativa (%)** por proyecto; la línea verde une puntos y el color del punto es la **tecnología**.\n\n"
-            "**Cómo leerlo:** el eje Y está acotado (95–100) para amplificar diferencias pequeñas; compara **homogeneidad** entre plantas.\n\n"
-            "**Matices:** rangos muy estrechos en la muestra pueden verse **planos**; con datos reales conviene revisar outliers y periodos."
+            _interp_disponibilidad(cobertura),
+            "**Qué muestra:** **disponibilidad (%)** por proyecto; línea de unión y color por **tecnología**.\n\n"
+            "**Cómo leerlo:** eje acotado (95–100) para resaltar diferencias pequeñas.\n\n"
+            "**Matices:** si la muestra es casi constante, el gráfico se verá plano; con series largas conviene revisar outliers.",
         )
 
     st.markdown("### Tabla")
@@ -849,9 +1074,10 @@ def _view_regulacion(d: dict[str, pd.DataFrame]) -> None:
     )
     st.altair_chart(chart, use_container_width=True)
     _chart_interp(
-        "**Qué muestra:** magnitud del **% de ahorro** asociado a cada **ley** en el dataset de regulación.\n\n"
-        "**Cómo leerlo:** el área representa el peso relativo del porcentaje entre las leyes mostradas; no es impacto fiscal agregado en pesos.\n\n"
-        "**Matices:** los porcentajes son **atributos normativos simplificados**; el efecto económico real depende de base gravable y elegibilidad."
+        _interp_regulacion_chart(regulacion),
+        "**Qué muestra:** peso relativo del **% de ahorro** asociado a cada **ley** en el dataset normativo cargado.\n\n"
+        "**Cómo leerlo:** el sector refleja la magnitud del porcentaje **respecto a la suma** dibujada —no es impacto fiscal en pesos.\n\n"
+        "**Matices:** el efecto real depende de **base gravable**, elegibilidad y ordenamiento jurídico.",
     )
 
 
@@ -924,6 +1150,7 @@ def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
     if st.button("🔍 Ejecutar consulta", type="primary", use_container_width=False):
         st.session_state["consulta_result"] = _execute_query_mock(d, query_type=query_type, query_energia=query_energia)
         st.session_state["consulta_sql"] = _generate_query_string(query_type, query_energia, query_anio)
+        st.session_state["consulta_query_type"] = query_type
 
     result_df: pd.DataFrame | None = st.session_state.get("consulta_result")
     sql: str | None = st.session_state.get("consulta_sql")
@@ -948,10 +1175,13 @@ def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
         .properties(height=320, title="Visualización de resultados")
     )
     st.altair_chart(chart, use_container_width=True)
+    # Solo el tipo guardado al ejecutar; evita mezclar el select actual con un resultado antiguo.
+    q_executed = str(st.session_state.get("consulta_query_type") or "")
     _chart_interp(
-        "**Qué muestra:** barras del **resultado** de la consulta demo (`label` vs `value`) tras aplicar filtros.\n\n"
-        "**Cómo leerlo:** cuando `label` es un **tipo de energía**, el color sigue el estándar del tablero; si la consulta devuelve etiquetas genéricas, el gráfico es solo ilustrativo.\n\n"
-        "**Matices:** la lógica es **mock**; para producción debe reemplazarse por ejecución sobre `MatrizEnergeticaCol` o vistas SQL validadas."
+        _interp_consulta_resultado(result_df, q_executed),
+        "**Qué muestra:** barras construidas desde las columnas **`label`** y **`value`** devueltas por el motor en memoria.\n\n"
+        "**Cómo leerlo:** si `label` es una **fuente** o **proyecto** conocido en el modelo, el color intenta seguir la convención del tablero.\n\n"
+        "**Matices:** sustituya el mock por ejecución parametrizada sobre **`MatrizEnergeticaCol`** para resultados operativos.",
     )
 
 
