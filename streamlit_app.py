@@ -93,6 +93,231 @@ def _inject_global_css() -> None:
             padding-bottom: 2.5rem;
             max-width: 1200px;
           }
+
+          /* Landing page (portada) */
+          .lp-wrap { font-family: "Segoe UI", system-ui, sans-serif; }
+          .lp-hero{
+            position: relative;
+            overflow: hidden;
+            border-radius: 1.35rem;
+            padding: 2.25rem 1.75rem 2rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #e8f5ef 0%, #f4f7f6 45%, #dff4e8 100%);
+            border: 1px solid rgba(0, 107, 63, 0.12);
+            box-shadow: 10px 10px 24px var(--shadow-dark), -8px -8px 20px var(--shadow-light);
+          }
+          .lp-hero::before{
+            content:"";
+            position:absolute; inset:0;
+            background: radial-gradient(ellipse 80% 60% at 100% 0%, rgba(0, 107, 63, 0.14), transparent 55%),
+                        radial-gradient(ellipse 60% 50% at 0% 100%, rgba(2, 132, 199, 0.1), transparent 50%);
+            pointer-events:none;
+          }
+          .lp-hero-inner{ position: relative; z-index: 1; max-width: 720px; }
+          .lp-badge{
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--color-accent-main);
+            background: rgba(255,255,255,0.75);
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            margin-bottom: 0.85rem;
+            box-shadow: inset 1px 1px 3px rgba(0,0,0,0.06);
+          }
+          .lp-h1{
+            font-size: clamp(1.55rem, 3.2vw, 2.15rem);
+            font-weight: 900;
+            line-height: 1.15;
+            color: var(--color-text-primary);
+            margin: 0 0 0.65rem 0;
+            letter-spacing: -0.02em;
+          }
+          .lp-h1 span{ color: var(--color-accent-main); }
+          .lp-lead{
+            font-size: 1.05rem;
+            line-height: 1.55;
+            color: var(--color-text-secondary);
+            margin: 0 0 1.1rem 0;
+          }
+          .lp-stats{
+            display: flex; flex-wrap: wrap; gap: 0.65rem 1rem;
+            margin-top: 1.1rem;
+          }
+          .lp-stat{
+            background: rgba(255,255,255,0.82);
+            border-radius: 0.85rem;
+            padding: 0.55rem 0.95rem;
+            box-shadow: 3px 3px 8px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+            min-width: 5.5rem;
+          }
+          .lp-stat-val{ font-size: 1.15rem; font-weight: 900; color: var(--color-accent-main); }
+          .lp-stat-lab{ font-size: 0.72rem; color: var(--color-text-secondary); font-weight: 650; margin-top: 0.15rem; }
+          .lp-section-title{
+            font-size: 1.05rem;
+            font-weight: 850;
+            color: var(--color-text-primary);
+            margin: 1.75rem 0 0.85rem;
+            letter-spacing: -0.01em;
+          }
+          .lp-grid2{ display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.85rem; }
+          .lp-card{
+            background: var(--color-box-bg);
+            border-radius: 1.1rem;
+            padding: 1.1rem 1.15rem;
+            border: 1px solid rgba(255,255,255,0.55);
+            box-shadow: 6px 6px 14px var(--shadow-dark), -5px -5px 12px var(--shadow-light);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+          }
+          .lp-card:hover{ transform: translateY(-2px); box-shadow: 8px 8px 18px var(--shadow-dark), -6px -6px 14px var(--shadow-light); }
+          .lp-card-ico{ font-size: 1.5rem; margin-bottom: 0.35rem; }
+          .lp-card h3{ margin: 0 0 0.4rem; font-size: 0.98rem; font-weight: 800; color: var(--color-text-primary); }
+          .lp-card p{ margin: 0; font-size: 0.88rem; line-height: 1.5; color: var(--color-text-secondary); }
+          .lp-pipeline{
+            display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.6rem;
+            margin-top: 0.5rem;
+          }
+          .lp-step{
+            flex: 1 1 140px;
+            background: var(--color-box-bg);
+            border-radius: 0.95rem;
+            padding: 0.85rem 1rem;
+            border: 1px solid rgba(0, 107, 63, 0.1);
+            box-shadow: 4px 4px 10px var(--shadow-dark), -3px -3px 8px var(--shadow-light);
+            position: relative;
+          }
+          .lp-step-num{
+            position:absolute; top: -0.45rem; left: 10px;
+            background: var(--color-accent-main); color: white;
+            font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 6px;
+          }
+          .lp-step strong{ display:block; font-size: 0.82rem; margin-bottom: 0.25rem; color: var(--color-text-primary); }
+          .lp-step span{ font-size: 0.78rem; color: var(--color-text-secondary); line-height: 1.45; }
+          .lp-team{
+            font-size: 0.88rem;
+            color: var(--color-text-secondary);
+            line-height: 1.65;
+            padding: 0.95rem 1.1rem;
+            background: rgba(255,255,255,0.55);
+            border-radius: 1rem;
+            border: 1px dashed rgba(0, 107, 63, 0.22);
+          }
+          .lp-quote{
+            margin: 1rem 0 0;
+            padding: 0.9rem 1.1rem;
+            border-left: 4px solid var(--color-accent-main);
+            background: rgba(0, 107, 63, 0.06);
+            border-radius: 0 0.75rem 0.75rem 0;
+            font-size: 0.92rem;
+            color: var(--color-text-secondary);
+            line-height: 1.5;
+            font-style: italic;
+          }
+          .lp-kicker{
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--color-accent-main);
+            margin: 1.5rem 0 0.35rem;
+          }
+          .lp-sub{
+            font-size: 0.92rem;
+            color: var(--color-text-secondary);
+            line-height: 1.45;
+            margin: 0 0 1rem 0;
+            max-width: 52rem;
+          }
+          .lp-uxstrip{
+            display: flex; flex-wrap: wrap; gap: 0.5rem;
+            margin: 0.75rem 0 1.25rem;
+          }
+          .lp-chip{
+            font-size: 0.72rem;
+            font-weight: 750;
+            padding: 0.35rem 0.65rem;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.85);
+            border: 1px solid rgba(0, 107, 63, 0.18);
+            color: var(--color-text-primary);
+            box-shadow: 2px 2px 6px var(--shadow-dark), -2px -2px 5px var(--shadow-light);
+          }
+          .lp-bento{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 0.95rem;
+            margin-top: 0.35rem;
+          }
+          .lp-mod{
+            position: relative;
+            background: linear-gradient(165deg, #f8faf9 0%, var(--color-box-bg) 100%);
+            border-radius: 1.05rem;
+            padding: 1rem 1.05rem 0.85rem;
+            border: 1px solid rgba(0, 107, 63, 0.11);
+            box-shadow: 6px 6px 14px var(--shadow-dark), -5px -5px 12px var(--shadow-light);
+            transition: transform 0.16s ease, box-shadow 0.16s ease;
+          }
+          .lp-mod:hover{
+            transform: translateY(-3px);
+            box-shadow: 9px 9px 20px var(--shadow-dark), -6px -6px 14px var(--shadow-light);
+          }
+          .lp-mod-top{
+            display:flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+            margin-bottom: 0.45rem;
+          }
+          .lp-mod-ico{ font-size: 1.35rem; line-height: 1; }
+          .lp-mod-badge{
+            font-size: 0.62rem; font-weight: 850;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0.22rem 0.5rem;
+            border-radius: 6px;
+            white-space: nowrap;
+          }
+          .lp-mod-badge.filters{ background: rgba(2, 132, 199, 0.14); color: #0369a1; }
+          .lp-mod-badge.nofilter{ background: rgba(245, 158, 11, 0.18); color: #b45309; }
+          .lp-mod-badge.builder{ background: rgba(16, 185, 129, 0.16); color: #047857; }
+          .lp-mod h4{
+            margin: 0 0 0.45rem 0;
+            font-size: 1rem;
+            font-weight: 900;
+            color: var(--color-text-primary);
+            letter-spacing: -0.02em;
+          }
+          .lp-mod ul{
+            margin: 0; padding-left: 1.05rem;
+            font-size: 0.8rem;
+            line-height: 1.48;
+            color: var(--color-text-secondary);
+          }
+          .lp-mod .lp-interp{
+            margin-top: 0.55rem;
+            font-size: 0.72rem;
+            font-weight: 750;
+            color: var(--color-accent-main);
+            display: flex; align-items: center; gap: 0.35rem;
+          }
+          .lp-mini-vis{
+            display: flex; align-items: flex-end; justify-content: center;
+            gap: 5px;
+            height: 52px;
+            margin-top: 0.65rem;
+            padding: 0 0.25rem;
+          }
+          .lp-mini-vis span{
+            flex: 1;
+            max-width: 22px;
+            border-radius: 5px 5px 2px 2px;
+            opacity: 0.92;
+          }
+          .lp-mini-donut{
+            width: 52px; height: 52px; border-radius: 50%;
+            margin: 0.6rem auto 0;
+            background: conic-gradient(#0284c7 0deg 120deg, #f59e0b 120deg 200deg, #10b981 200deg 280deg, #ef4444 280deg 360deg);
+            box-shadow: inset 0 0 0 14px var(--color-box-bg);
+          }
         </style>
         """,
         unsafe_allow_html=True,
@@ -198,7 +423,7 @@ def _page_header(title: str, subtitle: str = "Demostración con datos alineados 
 
 def _top_nav(current_view: str) -> str:
     nav_items: list[tuple[str, str, str]] = [
-        ("inicio", "Inicio", "⚡"),
+        ("inicio", "Inicio", "🏠"),
         ("dashboard", "Dashboard", "📊"),
         ("proyectos", "Proyectos", "🏗️"),
         ("costos", "Costos", "💰"),
@@ -226,117 +451,288 @@ def _top_nav(current_view: str) -> str:
     return st.session_state.get("view", current_view)
 
 
-def _view_inicio() -> None:
-    st.markdown("### Bienvenido")
+def _go_view(vid: str) -> None:
+    """Navegación programática (p. ej. CTAs del landing)."""
+    st.session_state["view"] = vid
+
+
+def _view_inicio(d: dict[str, pd.DataFrame]) -> None:
+    """Portada tipo landing: propuesta de valor, CTAs, pilas analíticas y confianza."""
+    proyectos = d["proyectos"]
+    tipo = d["tipo_energia"]
+    regulacion = d["regulacion"]
+    n_proyectos = int(len(proyectos))
+    mw_total = float(proyectos["capacidad_mw"].sum())
+    gw_str = f"{mw_total / 1000:.2f}".replace(".", ",")
+    n_tipos = int(len(tipo))
+    n_normas = int(len(regulacion))
+
     st.markdown(
-        """
-        <div class="neo-card" style="padding: 18px;">
-          <div style="font-weight: 900; font-size: 18px; margin-bottom: 6px; color: var(--color-text-primary);">
-            EnergyTrans Colombia
+        f"""
+        <div class="lp-wrap">
+          <div class="lp-hero">
+            <div class="lp-hero-inner">
+              <div class="lp-badge">Proyecto académico · Talento Tech · Análisis de datos</div>
+              <h1 class="lp-h1">Transición energética en Colombia:<br/><span>una lectura integrada</span> de capacidad, costos y cobertura</h1>
+              <p class="lp-lead">
+                En cada pestaña encontrarás <strong>gráficos interactivos (Altair)</strong>, <strong>filtros</strong> cuando aplica,
+                <strong>tablas</strong> y, bajo cada visual, un desplegable <strong>«📌 Interpretación»</strong> con lectura de datos
+                (qué muestra, cómo leerlo y matices). Esta portada resume <strong>exactamente</strong> lo que verás al navegar.
+              </p>
+              <div class="lp-stats">
+                <div class="lp-stat"><div class="lp-stat-val">{n_proyectos}</div><div class="lp-stat-lab">Proyectos (muestra)</div></div>
+                <div class="lp-stat"><div class="lp-stat-val">{gw_str} GW</div><div class="lp-stat-lab">Capacidad agregada</div></div>
+                <div class="lp-stat"><div class="lp-stat-val">{n_tipos}</div><div class="lp-stat-lab">Tipos de energía</div></div>
+                <div class="lp-stat"><div class="lp-stat-val">{n_normas}</div><div class="lp-stat-lab">Marcos normativos</div></div>
+              </div>
+            </div>
           </div>
-          <div style="color: var(--color-text-secondary); font-size: 14px; line-height: 1.5;">
-            Este tablero usa la <b>misma muestra que el script MySQL</b>: costos con corte <b>2024</b> y dimensiones de proyectos/cobertura.
-            La serie diaria de <b>Fact_Generacion</b> del SQL (2020-01-01 a 2020-05-21) aún <b>no</b> se visualiza aquí; el cuaderno
-            <code>Transicion_Energetica.ipynb</code> trabaja un horizonte <b>2020–2026 sintético</b> aparte. Navegación rápida, comparaciones visuales y consultas demo.
-          </div>
-          <div style="margin-top: 10px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.5;">
-            Realizado para el <b>curso de Análisis de Datos Integrador</b> de <b>Talento Tech</b>.
+          <div class="lp-quote">
+            &ldquo;¿Cómo se compone la capacidad y la economía por tecnología, y qué patrón emerge al cruzar costos con cobertura y regulación?&rdquo;
           </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown(
-            """
-            <div class="neo-card" style="padding: 18px;">
-              <div style="font-weight: 900; color: var(--color-text-primary);">🎯 Objetivo</div>
-              <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.5;">
-                Entender el avance de tecnologías renovables y su impacto en capacidad instalada, inversión y cobertura.
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+    st.markdown("##### Ir directo a cada experiencia")
+    r1c1, r1c2, r1c3, r1c4 = st.columns(4, gap="small")
+    with r1c1:
+        st.button(
+            "📊 Dashboard",
+            key="lp_cta_dashboard",
+            use_container_width=True,
+            type="primary",
+            on_click=_go_view,
+            args=("dashboard",),
+            help="Resumen + 4 gráficos Altair + tarjetas por tecnología",
         )
-    with c2:
-        st.markdown(
-            """
-            <div class="neo-card" style="padding: 18px;">
-              <div style="font-weight: 900; color: var(--color-text-primary);">🧩 Qué encontrarás</div>
-              <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.55;">
-                - Dashboard ejecutivo<br/>
-                - Filtros por tipo/departamento/proyecto<br/>
-                - Costos con análisis dinámico<br/>
-                - Cobertura y disponibilidad<br/>
-                - Marco regulatorio e incentivos
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+    with r1c2:
+        st.button(
+            "🏗️ Proyectos",
+            key="lp_cta_proyectos",
+            use_container_width=True,
+            on_click=_go_view,
+            args=("proyectos",),
+            help="3 filtros + tarjetas + tabla",
         )
-    with c3:
-        st.markdown(
-            """
-            <div class="neo-card" style="padding: 18px;">
-              <div style="font-weight: 900; color: var(--color-text-primary);">🗂️ Datos</div>
-              <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.55;">
-                Fuentes esperadas: MinEnergía / UPME.<br/>
-                En esta demo, los datos son <b>mock</b> para mostrar la experiencia y el modelo dimensional.
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+    with r1c3:
+        st.button(
+            "💰 Costos",
+            key="lp_cta_costos",
+            use_container_width=True,
+            on_click=_go_view,
+            args=("costos",),
+            help="5 filtros + 2 gráficos + tabla",
+        )
+    with r1c4:
+        st.button(
+            "📶 Cobertura",
+            key="lp_cta_cobertura",
+            use_container_width=True,
+            on_click=_go_view,
+            args=("cobertura",),
+            help="2 gráficos + tabla regulación",
+        )
+    r2c1, r2c2 = st.columns(2, gap="small")
+    with r2c1:
+        st.button(
+            "📄 Regulación",
+            key="lp_cta_regulacion",
+            use_container_width=True,
+            on_click=_go_view,
+            args=("regulacion",),
+            help="Tarjetas normativa + donut",
+        )
+    with r2c2:
+        st.button(
+            "🔎 Consultas",
+            key="lp_cta_consultas",
+            use_container_width=True,
+            on_click=_go_view,
+            args=("consultas",),
+            help="Constructor + SQL + barras + interpretación",
         )
 
-    st.markdown("### Integrantes")
     st.markdown(
         """
-        <div class="neo-card" style="padding: 18px;">
-          <div style="font-weight: 900; color: var(--color-text-primary); margin-bottom: 10px;">👥 Equipo</div>
-          <div style="color: var(--color-text-secondary); font-size: 13px; line-height: 1.7;">
-            - Claudia Arroyave<br/>
-            - Michely Muñoz<br/>
-            - Jesus Garcia<br/>
-            - Maria Alejandra Colorado Ríos
+        <div class="lp-kicker">Mapa de la aplicación</div>
+        <p class="lp-sub">
+          Lo siguiente corresponde <strong>uno a uno</strong> con el código de <code>streamlit_app.py</code>:
+          mismos tipos de gráfico, mismos controles y el mismo patrón de <strong>Interpretación</strong> bajo cada Altair.
+        </p>
+        <div class="lp-uxstrip">
+          <span class="lp-chip">Altair + tooltips</span>
+          <span class="lp-chip">Color por tecnología (4 fuentes)</span>
+          <span class="lp-chip">📌 Interpretación en expander</span>
+          <span class="lp-chip">Neumórfico + contraste legible</span>
+        </div>
+        <div class="lp-bento">
+          <div class="lp-mod">
+            <div class="lp-mod-top">
+              <span class="lp-mod-ico">📊</span>
+              <span class="lp-mod-badge nofilter">Sin filtros</span>
+            </div>
+            <h4>Dashboard</h4>
+            <ul>
+              <li><strong>Resumen:</strong> 6 tarjetas KPI (proyectos, capacidad, CAPEX, usuarios, LCOE, FNCER).</li>
+              <li><strong>Gráficos:</strong> donut <em>Capacidad por tipo</em>; barras <em>LCOE por tecnología</em>; barras superpuestas <em>CAPEX vs OPEX</em>; donut <em>Cobertura por proyecto</em>.</li>
+              <li><strong>Fila inferior:</strong> 4 tarjetas neumórficas por tecnología (icono, descripción, MW).</li>
+            </ul>
+            <div class="lp-interp">📌 Un expander «Interpretación» debajo de cada gráfico</div>
+            <div class="lp-mini-donut" title="Mix capacidad"></div>
+          </div>
+          <div class="lp-mod">
+            <div class="lp-mod-top">
+              <span class="lp-mod-ico">🏗️</span>
+              <span class="lp-mod-badge filters">3 filtros</span>
+            </div>
+            <h4>Proyectos</h4>
+            <ul>
+              <li><strong>Filtros:</strong> <code>selectbox</code> tipo (o Todos); <code>selectbox</code> departamento; <code>number_input</code> capacidad mínima (MW).</li>
+              <li><strong>Salida:</strong> rejilla de <strong>tarjetas</strong> (nombre, depto, tipo, LCOE, badges) + <strong>tabla</strong> interactiva (ID, proyecto, depto, tipo, MW, LCOE).</li>
+            </ul>
+            <div class="lp-interp">Enfoque exploratorio; no hay gráfico de barras en esta vista</div>
+            <div class="lp-mini-vis" aria-hidden="true">
+              <span style="height:35%;background:#0284c7"></span><span style="height:55%;background:#f59e0b"></span>
+              <span style="height:42%;background:#10b981"></span><span style="height:28%;background:#ef4444"></span>
+            </div>
+          </div>
+          <div class="lp-mod">
+            <div class="lp-mod-top">
+              <span class="lp-mod-ico">💰</span>
+              <span class="lp-mod-badge filters">5 filtros + multiselect</span>
+            </div>
+            <h4>Costos</h4>
+            <ul>
+              <li><strong>Filtros:</strong> año; tipo de energía; métrica foco (LCOE / CAPEX); orden Asc/Desc; <strong>multiselect</strong> de proyectos (recalcula gráficos y tabla).</li>
+              <li><strong>Gráficos:</strong> barras <em>LCOE comparativo</em> por proyecto; barras <em>CAPEX por proyecto</em> (color por tecnología).</li>
+              <li><strong>Tabla:</strong> proyecto, tipo, año, LCOE, CAPEX, OPEX, costo total.</li>
+            </ul>
+            <div class="lp-interp">📌 Interpretación específica para LCOE y para CAPEX</div>
+            <div class="lp-mini-vis" aria-hidden="true">
+              <span style="height:62%;background:#0284c7"></span><span style="height:45%;background:#f59e0b"></span>
+              <span style="height:70%;background:#10b981"></span><span style="height:38%;background:#ef4444"></span>
+              <span style="height:52%;background:#0284c7"></span>
+            </div>
+          </div>
+          <div class="lp-mod">
+            <div class="lp-mod-top">
+              <span class="lp-mod-ico">📶</span>
+              <span class="lp-mod-badge nofilter">Gráfico + tabla</span>
+            </div>
+            <h4>Cobertura</h4>
+            <ul>
+              <li><strong>Gráficos:</strong> barras <em>Usuarios por proyecto</em>; combinado línea + puntos <em>Disponibilidad %</em> (eje 95–100%, color por tipo).</li>
+              <li><strong>Tabla:</strong> proyecto, <strong>ley</strong> de regulación asociada, usuarios, disponibilidad.</li>
+            </ul>
+            <div class="lp-interp">📌 Dos interpretaciones (usuarios + disponibilidad)</div>
+            <div class="lp-mini-vis" aria-hidden="true">
+              <span style="height:48%;background:#006b3f"></span><span style="height:52%;background:#0284c7"></span>
+              <span style="height:50%;background:#f59e0b"></span>
+            </div>
+          </div>
+          <div class="lp-mod">
+            <div class="lp-mod-top">
+              <span class="lp-mod-ico">📄</span>
+              <span class="lp-mod-badge nofilter">Tarjetas + donut</span>
+            </div>
+            <h4>Regulación</h4>
+            <ul>
+              <li><strong>Contenido:</strong> tarjetas por ley (incentivo + badge % ahorro).</li>
+              <li><strong>Gráfico:</strong> donut <em>Impacto de incentivos</em> (theta = % ahorro por ley).</li>
+            </ul>
+            <div class="lp-interp">📌 Interpretación sobre lectura normativa vs impacto fiscal real</div>
+            <div class="lp-mini-donut" style="margin-top:0.5rem;max-width:52px;height:52px;background:conic-gradient(#006b3f 0deg 200deg,#0369a1 200deg 360deg);box-shadow:inset 0 0 0 12px var(--color-box-bg)"></div>
+          </div>
+          <div class="lp-mod">
+            <div class="lp-mod-top">
+              <span class="lp-mod-ico">🔎</span>
+              <span class="lp-mod-badge builder">Constructor demo</span>
+            </div>
+            <h4>Consultas</h4>
+            <ul>
+              <li><strong>Controles:</strong> tipo de consulta (capacidad, LCOE, inversión, cobertura, eficiencia); filtro tipo de energía; año para el SQL mostrado.</li>
+              <li><strong>Salida:</strong> bloque <code>st.code</code> con la sentencia; <strong>dataframe</strong>; gráfico de <strong>barras</strong> del resultado + 📌 Interpretación.</li>
+            </ul>
+            <div class="lp-interp">La ejecución es mock; el SQL es plantilla hacia MySQL</div>
+            <div class="lp-mini-vis" aria-hidden="true">
+              <span style="height:40%;background:#006b3f"></span><span style="height:65%;background:#006b3f"></span>
+              <span style="height:50%;background:#006b3f"></span>
+            </div>
+          </div>
+        </div>
+        <div class="lp-section-title" style="margin-top:1.35rem;">Por qué funciona como producto de datos</div>
+        <div class="lp-grid2">
+          <div class="lp-card">
+            <div class="lp-card-ico">📐</div>
+            <h3>Mismo modelo que el SQL</h3>
+            <p>Proyectos, tipos, costos, cobertura y regulación se alinean con <code>MatrizEnergeticaCol</code> para narrativa trazable.</p>
+          </div>
+          <div class="lp-card">
+            <div class="lp-card-ico">🧪</div>
+            <h3>Filtros = hipótesis</h3>
+            <p>Cada <code>selectbox</code> o multiselect te permite probar escenarios sin salir del navegador.</p>
+          </div>
+          <div class="lp-card">
+            <div class="lp-card-ico">📌</div>
+            <h3>Interpretación integrada</h3>
+            <p>No solo “ver el gráfico”: el expander ancla criterios de lectura y límites del mock.</p>
+          </div>
+          <div class="lp-card">
+            <div class="lp-card-ico">🔗</div>
+            <h3>Tres capas</h3>
+            <p>Cuaderno (método), MySQL (persistencia), Streamlit (exploración) — un solo hilo conceptual.</p>
           </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("### Guía rápida")
-    g1, g2 = st.columns(2)
-    with g1:
+    st.markdown(
+        """
+        <div class="lp-section-title">Flujo de trabajo del proyecto</div>
+        <div class="lp-pipeline">
+          <div class="lp-step"><span class="lp-step-num">1</span><strong>Cuaderno Jupyter</strong><span>EDA, calidad, features e historia analítica (serie sintética 2020–2026).</span></div>
+          <div class="lp-step"><span class="lp-step-num">2</span><strong>MySQL / Workbench</strong><span>Esquema MatrizEnergeticaCol, hechos y consultas reproducibles.</span></div>
+          <div class="lp-step"><span class="lp-step-num">3</span><strong>Streamlit</strong><span>Exploración operativa; hoy mock alineado al SQL (costos 2024).</span></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
+        <div class="lp-section-title">Equipo</div>
+        <div class="lp-team">
+          <strong style="color:var(--color-text-primary);">EnergyTransitionColombia</strong> ·
+          Claudia Arroyave · Michely Muñoz · Jesus Garcia · Maria Alejandra Colorado Ríos<br/>
+          <span style="font-size:0.82rem;">Curso <strong>Análisis de Datos Integrador</strong> · Referentes metodológicos tipo XM / UPME / SGC en el cuaderno (datos sintéticos).</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    with st.expander("📋 Guía rápida (rutas + interpretaciones)", expanded=False):
         st.markdown(
             """
-            <div class="neo-card" style="padding: 18px;">
-              <div style="font-weight: 900; color: var(--color-text-primary);">✅ Cómo usar</div>
-              <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.6;">
-                1) Entra a <b>Dashboard</b> para una vista ejecutiva.<br/>
-                2) Usa <b>Proyectos</b> para explorar por tipo/departamento/capacidad.<br/>
-                3) En <b>Costos</b>, filtra por tipo/año/proyectos para comparar LCOE y CAPEX.<br/>
-                4) En <b>Cobertura</b> revisa usuarios y disponibilidad por proyecto.<br/>
-                5) En <b>Consultas</b> haz exploración tipo SQL (demo).
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+            1. **Dashboard** — 6 KPI + 4 gráficos Altair (2 donuts, barras LCOE, barras CAPEX/OPEX) + tarjetas por tecnología. Abre **📌 Interpretación** bajo cada gráfico.  
+            2. **Proyectos** — Filtros tipo / departamento / MW mínimos → tarjetas + `st.dataframe`.  
+            3. **Costos** — Año, tipo, métrica LCOE|CAPEX, orden, multiselect de proyectos → 2 gráficos de barras + tabla; dos interpretaciones.  
+            4. **Cobertura** — Barras usuarios + línea/puntos disponibilidad + tabla con ley reguladora.  
+            5. **Regulación** — Tarjetas por ley + donut de incentivos + interpretación.  
+            6. **Consultas** — Tipo de consulta, energía, año → SQL en pantalla, tabla y barras (mock).
+            """
         )
-    with g2:
+
+    with st.expander("⚠️ Datos, alcance temporal y uso del tablero", expanded=False):
         st.markdown(
             """
-            <div class="neo-card" style="padding: 18px;">
-              <div style="font-weight: 900; color: var(--color-text-primary);">⚠️ Notas de calidad</div>
-              <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.6;">
-                - Los valores actuales son demostrativos (mock).<br/>
-                - El estándar de colores por tipo de energía se mantiene en toda la app.<br/>
-                - La vista Costos ya toma los años presentes en el mock (hoy solo 2024, como en Fact_Costos del SQL).
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+            - Esta **demo web** usa datos **mock en memoria** alineados al modelo del repositorio (costos con corte **2024**).  
+            - En el script SQL, **Fact_Generacion** incluye una serie diaria **2020-01-01 a 2020-05-21**; esa serie **aún no** se grafica en Streamlit.  
+            - El archivo **Transicion_Energetica.ipynb** usa un horizonte **2020–2026 sintético** para el análisis; no es el mismo universo de fechas que los INSERT actuales del SQL.  
+            - Las cifras **no** son estadística oficial: para inferencia sobre el sistema real, sustituye por fuentes primarias y valida en producción.
+            """
         )
 
 
@@ -966,11 +1362,13 @@ def main() -> None:
     if "view" not in st.session_state:
         st.session_state["view"] = "inicio"
 
-    _page_header("EnergyTrans Colombia")
-    view = _top_nav(st.session_state["view"])
+    _cur = st.session_state["view"]
+    if _cur != "inicio":
+        _page_header("EnergyTrans Colombia")
+    view = _top_nav(_cur)
 
     if view == "inicio":
-        _view_inicio()
+        _view_inicio(d)
     elif view == "dashboard":
         _view_dashboard(d)
     elif view == "proyectos":
@@ -986,7 +1384,8 @@ def main() -> None:
     else:
         st.error("Vista no reconocida.")
 
-    st.divider()
+    if view != "inicio":
+        st.divider()
     st.caption("© 2024 EnergyTrans Colombia | Muestra alineada al SQL: costos 2024; generación en BD 2020 (parcial), no mostrada aún")
 
 
