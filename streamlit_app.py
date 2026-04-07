@@ -542,46 +542,180 @@ def _load_data() -> dict[str, pd.DataFrame]:
 
     proyectos = pd.DataFrame(
         [
-            {"id_proyecto": 101, "nombre": "Hidroituango", "depto": "Antioquia", "id_tipo": 1, "capacidad_mw": 2400},
-            {"id_proyecto": 102, "nombre": "Guavio", "depto": "Cundinamarca", "id_tipo": 1, "capacidad_mw": 1213},
-            {"id_proyecto": 201, "nombre": "La Loma", "depto": "Cesar", "id_tipo": 2, "capacidad_mw": 187},
-            {"id_proyecto": 202, "nombre": "Celsia Solar", "depto": "Tolima", "id_tipo": 2, "capacidad_mw": 80},
-            {"id_proyecto": 301, "nombre": "Guajira I", "depto": "La Guajira", "id_tipo": 3, "capacidad_mw": 20},
-            {"id_proyecto": 302, "nombre": "Alpha Wind", "depto": "La Guajira", "id_tipo": 3, "capacidad_mw": 504},
-            {"id_proyecto": 401, "nombre": "Nereidas", "depto": "Caldas", "id_tipo": 4, "capacidad_mw": 50},
+            # ================= HIDRÁULICA =================
+            {"id_proyecto": 1, "nombre": "Hidroituango", "depto": "Antioquia", "id_tipo": 1, "capacidad_mw": 2400},
+            {"id_proyecto": 2, "nombre": "Guavio", "depto": "Cundinamarca", "id_tipo": 1, "capacidad_mw": 1213},
+            {"id_proyecto": 3, "nombre": "San Carlos", "depto": "Antioquia", "id_tipo": 1, "capacidad_mw": 1240},
+            {"id_proyecto": 4, "nombre": "Sogamoso", "depto": "Santander", "id_tipo": 1, "capacidad_mw": 820},
+            {"id_proyecto": 5, "nombre": "Chivor", "depto": "Boyacá", "id_tipo": 1, "capacidad_mw": 1000},
+            {"id_proyecto": 6, "nombre": "Porce III", "depto": "Antioquia", "id_tipo": 1, "capacidad_mw": 660},
+            {"id_proyecto": 7, "nombre": "Urrá I", "depto": "Córdoba", "id_tipo": 1, "capacidad_mw": 340},
+            {"id_proyecto": 8, "nombre": "Betania", "depto": "Huila", "id_tipo": 1, "capacidad_mw": 540},
+            {"id_proyecto": 9, "nombre": "El Quimbo", "depto": "Huila", "id_tipo": 1, "capacidad_mw": 400},
+
+            # ================= SOLAR =================
+            {"id_proyecto": 20, "nombre": "La Loma Solar", "depto": "Cesar", "id_tipo": 2, "capacidad_mw": 187},
+            {"id_proyecto": 21, "nombre": "Celsia Solar Tolima", "depto": "Tolima", "id_tipo": 2, "capacidad_mw": 80},
+            {"id_proyecto": 22, "nombre": "Bosconia Solar", "depto": "Cesar", "id_tipo": 2, "capacidad_mw": 150},
+            {"id_proyecto": 23, "nombre": "Meta Solar Park", "depto": "Meta", "id_tipo": 2, "capacidad_mw": 120},
+            {"id_proyecto": 24, "nombre": "Valle Solar", "depto": "Valle del Cauca", "id_tipo": 2, "capacidad_mw": 90},
+            {"id_proyecto": 25, "nombre": "Atlántico Solar", "depto": "Atlántico", "id_tipo": 2, "capacidad_mw": 70},
+            {"id_proyecto": 26, "nombre": "Bolívar Solar", "depto": "Bolívar", "id_tipo": 2, "capacidad_mw": 65},
+            {"id_proyecto": 27, "nombre": "Santander Solar", "depto": "Santander", "id_tipo": 2, "capacidad_mw": 85},
+            {"id_proyecto": 28, "nombre": "Cauca Solar", "depto": "Cauca", "id_tipo": 2, "capacidad_mw": 60},
+            {"id_proyecto": 29, "nombre": "Nariño Solar", "depto": "Nariño", "id_tipo": 2, "capacidad_mw": 50},
+
+            # ================= EÓLICA =================
+            {"id_proyecto": 40, "nombre": "Guajira I", "depto": "La Guajira", "id_tipo": 3, "capacidad_mw": 20},
+            {"id_proyecto": 41, "nombre": "Alpha Wind", "depto": "La Guajira", "id_tipo": 3, "capacidad_mw": 504},
+            {"id_proyecto": 42, "nombre": "Beta Wind", "depto": "La Guajira", "id_tipo": 3, "capacidad_mw": 300},
+            {"id_proyecto": 43, "nombre": "Caribe Wind", "depto": "Atlántico", "id_tipo": 3, "capacidad_mw": 150},
+            {"id_proyecto": 44, "nombre": "Magdalena Wind", "depto": "Magdalena", "id_tipo": 3, "capacidad_mw": 120},
+            {"id_proyecto": 45, "nombre": "Sucre Wind", "depto": "Sucre", "id_tipo": 3, "capacidad_mw": 100},
+
+            # ================= GEOTÉRMICA =================
+            {"id_proyecto": 60, "nombre": "Nereidas", "depto": "Caldas", "id_tipo": 4, "capacidad_mw": 50},
+            {"id_proyecto": 61, "nombre": "Nevado Geo", "depto": "Tolima", "id_tipo": 4, "capacidad_mw": 45},
+            {"id_proyecto": 62, "nombre": "Ruiz Geo", "depto": "Caldas", "id_tipo": 4, "capacidad_mw": 40},
+            {"id_proyecto": 63, "nombre": "Azufral Geo", "depto": "Nariño", "id_tipo": 4, "capacidad_mw": 35},
+
+            # ================= COBERTURA NACIONAL =================
+            {"id_proyecto": 80, "nombre": "Amazonas Solar", "depto": "Amazonas", "id_tipo": 2, "capacidad_mw": 20},
+            {"id_proyecto": 81, "nombre": "Vaupés Solar", "depto": "Vaupés", "id_tipo": 2, "capacidad_mw": 10},
+            {"id_proyecto": 82, "nombre": "Guainía Solar", "depto": "Guainía", "id_tipo": 2, "capacidad_mw": 12},
+            {"id_proyecto": 83, "nombre": "Putumayo Solar", "depto": "Putumayo", "id_tipo": 2, "capacidad_mw": 25},
+            {"id_proyecto": 84, "nombre": "Arauca Solar", "depto": "Arauca", "id_tipo": 2, "capacidad_mw": 30},
+            {"id_proyecto": 85, "nombre": "Casanare Solar", "depto": "Casanare", "id_tipo": 2, "capacidad_mw": 70},
         ]
     )
 
     costos = pd.DataFrame(
         [
-            # 2024 (año de referencia principal)
-            {"id_proyecto": 101, "anio": 2024, "lcoe_usd_mwh": 47.54, "capex_musd": 2640.0, "opex_musd": 72.0},
-            {"id_proyecto": 102, "anio": 2024, "lcoe_usd_mwh": 44.71, "capex_musd": 1334.3, "opex_musd": 36.39},
-            {"id_proyecto": 201, "anio": 2024, "lcoe_usd_mwh": 68.64, "capex_musd": 205.7, "opex_musd": 5.61},
-            {"id_proyecto": 202, "anio": 2024, "lcoe_usd_mwh": 71.79, "capex_musd": 88.0, "opex_musd": 2.4},
-            {"id_proyecto": 301, "anio": 2024, "lcoe_usd_mwh": 41.42, "capex_musd": 22.0, "opex_musd": 0.6},
-            {"id_proyecto": 302, "anio": 2024, "lcoe_usd_mwh": 82.13, "capex_musd": 554.4, "opex_musd": 15.12},
-            {"id_proyecto": 401, "anio": 2024, "lcoe_usd_mwh": 42.34, "capex_musd": 55.0, "opex_musd": 1.5},
-            # 2023 (serie mock mínima para comparación YoY en interpretaciones)
-            {"id_proyecto": 101, "anio": 2023, "lcoe_usd_mwh": 48.36, "capex_musd": 2640.0, "opex_musd": 72.0},
-            {"id_proyecto": 102, "anio": 2023, "lcoe_usd_mwh": 45.58, "capex_musd": 1334.3, "opex_musd": 36.39},
-            {"id_proyecto": 201, "anio": 2023, "lcoe_usd_mwh": 69.96, "capex_musd": 205.7, "opex_musd": 5.61},
-            {"id_proyecto": 202, "anio": 2023, "lcoe_usd_mwh": 72.58, "capex_musd": 88.0, "opex_musd": 2.4},
-            {"id_proyecto": 301, "anio": 2023, "lcoe_usd_mwh": 42.22, "capex_musd": 22.0, "opex_musd": 0.6},
-            {"id_proyecto": 302, "anio": 2023, "lcoe_usd_mwh": 83.46, "capex_musd": 554.4, "opex_musd": 15.12},
-            {"id_proyecto": 401, "anio": 2023, "lcoe_usd_mwh": 43.08, "capex_musd": 55.0, "opex_musd": 1.5},
+            # ================= HIDRÁULICOS =================
+            # Hidroituango (2400 MW)
+            {"id_proyecto":1,"anio":2020,"lcoe_usd_mwh":55,"capex_musd":2600,"opex_musd":78},
+            {"id_proyecto":1,"anio":2021,"lcoe_usd_mwh":54,"capex_musd":2620,"opex_musd":79},
+            {"id_proyecto":1,"anio":2022,"lcoe_usd_mwh":52,"capex_musd":2640,"opex_musd":80},
+            {"id_proyecto":1,"anio":2023,"lcoe_usd_mwh":50,"capex_musd":2660,"opex_musd":82},
+            {"id_proyecto":1,"anio":2024,"lcoe_usd_mwh":49,"capex_musd":2680,"opex_musd":83},
+            {"id_proyecto":1,"anio":2025,"lcoe_usd_mwh":48,"capex_musd":2700,"opex_musd":84},
+            {"id_proyecto":1,"anio":2026,"lcoe_usd_mwh":47,"capex_musd":2720,"opex_musd":86},
+
+            # Guavio (1213 MW)
+            {"id_proyecto":2,"anio":2020,"lcoe_usd_mwh":57,"capex_musd":1300,"opex_musd":40},
+            {"id_proyecto":2,"anio":2021,"lcoe_usd_mwh":56,"capex_musd":1310,"opex_musd":41},
+            {"id_proyecto":2,"anio":2022,"lcoe_usd_mwh":54,"capex_musd":1320,"opex_musd":42},
+            {"id_proyecto":2,"anio":2023,"lcoe_usd_mwh":52,"capex_musd":1335,"opex_musd":43},
+            {"id_proyecto":2,"anio":2024,"lcoe_usd_mwh":51,"capex_musd":1350,"opex_musd":44},
+            {"id_proyecto":2,"anio":2025,"lcoe_usd_mwh":50,"capex_musd":1365,"opex_musd":45},
+            {"id_proyecto":2,"anio":2026,"lcoe_usd_mwh":49,"capex_musd":1380,"opex_musd":46},
+
+            # Sogamoso (820 MW)
+            {"id_proyecto":4,"anio":2020,"lcoe_usd_mwh":60,"capex_musd":900,"opex_musd":28},
+            {"id_proyecto":4,"anio":2021,"lcoe_usd_mwh":59,"capex_musd":910,"opex_musd":29},
+            {"id_proyecto":4,"anio":2022,"lcoe_usd_mwh":57,"capex_musd":920,"opex_musd":30},
+            {"id_proyecto":4,"anio":2023,"lcoe_usd_mwh":55,"capex_musd":930,"opex_musd":31},
+            {"id_proyecto":4,"anio":2024,"lcoe_usd_mwh":54,"capex_musd":945,"opex_musd":32},
+            {"id_proyecto":4,"anio":2025,"lcoe_usd_mwh":53,"capex_musd":960,"opex_musd":33},
+            {"id_proyecto":4,"anio":2026,"lcoe_usd_mwh":52,"capex_musd":980,"opex_musd":34},
+
+            # ================= SOLARES =================
+            # La Loma (187 MW)
+            {"id_proyecto":20,"anio":2020,"lcoe_usd_mwh":90,"capex_musd":210,"opex_musd":4.5},
+            {"id_proyecto":20,"anio":2021,"lcoe_usd_mwh":85,"capex_musd":205,"opex_musd":4.3},
+            {"id_proyecto":20,"anio":2022,"lcoe_usd_mwh":80,"capex_musd":200,"opex_musd":4.1},
+            {"id_proyecto":20,"anio":2023,"lcoe_usd_mwh":75,"capex_musd":195,"opex_musd":4.0},
+            {"id_proyecto":20,"anio":2024,"lcoe_usd_mwh":70,"capex_musd":190,"opex_musd":3.9},
+            {"id_proyecto":20,"anio":2025,"lcoe_usd_mwh":65,"capex_musd":188,"opex_musd":3.8},
+            {"id_proyecto":20,"anio":2026,"lcoe_usd_mwh":60,"capex_musd":185,"opex_musd":3.7},
+
+            # Meta Solar (120 MW)
+            {"id_proyecto":23,"anio":2020,"lcoe_usd_mwh":92,"capex_musd":140,"opex_musd":3.2},
+            {"id_proyecto":23,"anio":2021,"lcoe_usd_mwh":87,"capex_musd":135,"opex_musd":3.1},
+            {"id_proyecto":23,"anio":2022,"lcoe_usd_mwh":82,"capex_musd":130,"opex_musd":3.0},
+            {"id_proyecto":23,"anio":2023,"lcoe_usd_mwh":77,"capex_musd":125,"opex_musd":2.9},
+            {"id_proyecto":23,"anio":2024,"lcoe_usd_mwh":72,"capex_musd":122,"opex_musd":2.8},
+            {"id_proyecto":23,"anio":2025,"lcoe_usd_mwh":67,"capex_musd":120,"opex_musd":2.7},
+            {"id_proyecto":23,"anio":2026,"lcoe_usd_mwh":62,"capex_musd":118,"opex_musd":2.6},
+
+            # ================= EÓLICOS =================
+            # Alpha Wind (504 MW)
+            {"id_proyecto":41,"anio":2020,"lcoe_usd_mwh":85,"capex_musd":600,"opex_musd":15},
+            {"id_proyecto":41,"anio":2021,"lcoe_usd_mwh":82,"capex_musd":590,"opex_musd":14.8},
+            {"id_proyecto":41,"anio":2022,"lcoe_usd_mwh":80,"capex_musd":580,"opex_musd":14.5},
+            {"id_proyecto":41,"anio":2023,"lcoe_usd_mwh":78,"capex_musd":570,"opex_musd":14.2},
+            {"id_proyecto":41,"anio":2024,"lcoe_usd_mwh":75,"capex_musd":560,"opex_musd":14},
+            {"id_proyecto":41,"anio":2025,"lcoe_usd_mwh":72,"capex_musd":550,"opex_musd":13.8},
+            {"id_proyecto":41,"anio":2026,"lcoe_usd_mwh":70,"capex_musd":540,"opex_musd":13.5},
+
+            # Caribe Wind (150 MW)
+            {"id_proyecto":43,"anio":2020,"lcoe_usd_mwh":88,"capex_musd":190,"opex_musd":5},
+            {"id_proyecto":43,"anio":2021,"lcoe_usd_mwh":85,"capex_musd":185,"opex_musd":4.9},
+            {"id_proyecto":43,"anio":2022,"lcoe_usd_mwh":82,"capex_musd":180,"opex_musd":4.8},
+            {"id_proyecto":43,"anio":2023,"lcoe_usd_mwh":79,"capex_musd":175,"opex_musd":4.7},
+            {"id_proyecto":43,"anio":2024,"lcoe_usd_mwh":76,"capex_musd":170,"opex_musd":4.6},
+            {"id_proyecto":43,"anio":2025,"lcoe_usd_mwh":73,"capex_musd":168,"opex_musd":4.5},
+            {"id_proyecto":43,"anio":2026,"lcoe_usd_mwh":70,"capex_musd":165,"opex_musd":4.4},
+
+            # ================= GEOTÉRMICA =================
+            # Nereidas (50 MW)
+            {"id_proyecto":60,"anio":2020,"lcoe_usd_mwh":60,"capex_musd":80,"opex_musd":3},
+            {"id_proyecto":60,"anio":2021,"lcoe_usd_mwh":59,"capex_musd":82,"opex_musd":3.1},
+            {"id_proyecto":60,"anio":2022,"lcoe_usd_mwh":58,"capex_musd":84,"opex_musd":3.2},
+            {"id_proyecto":60,"anio":2023,"lcoe_usd_mwh":57,"capex_musd":86,"opex_musd":3.3},
+            {"id_proyecto":60,"anio":2024,"lcoe_usd_mwh":56,"capex_musd":88,"opex_musd":3.4},
+            {"id_proyecto":60,"anio":2025,"lcoe_usd_mwh":55,"capex_musd":90,"opex_musd":3.5},
+            {"id_proyecto":60,"anio":2026,"lcoe_usd_mwh":54,"capex_musd":92,"opex_musd":3.6},
         ]
     )
 
     cobertura = pd.DataFrame(
         [
-            {"id_proyecto": 101, "id_reg": 2, "usuarios": 1080000, "disponibilidad_pct": 98.5},
-            {"id_proyecto": 102, "id_reg": 2, "usuarios": 545850, "disponibilidad_pct": 98.5},
-            {"id_proyecto": 201, "id_reg": 1, "usuarios": 84150, "disponibilidad_pct": 98.5},
-            {"id_proyecto": 202, "id_reg": 1, "usuarios": 36000, "disponibilidad_pct": 98.5},
-            {"id_proyecto": 301, "id_reg": 1, "usuarios": 9000, "disponibilidad_pct": 98.5},
-            {"id_proyecto": 302, "id_reg": 1, "usuarios": 226800, "disponibilidad_pct": 98.5},
-            {"id_proyecto": 401, "id_reg": 1, "usuarios": 22500, "disponibilidad_pct": 98.5},
+                # ================= HIDRÁULICOS =================
+            {"id_proyecto":1,"id_reg":2,"usuarios":1200000,"disponibilidad_pct":98.7},
+            {"id_proyecto":2,"id_reg":2,"usuarios":620000,"disponibilidad_pct":98.5},
+            {"id_proyecto":3,"id_reg":2,"usuarios":640000,"disponibilidad_pct":98.6},
+            {"id_proyecto":4,"id_reg":2,"usuarios":420000,"disponibilidad_pct":98.4},
+            {"id_proyecto":5,"id_reg":2,"usuarios":520000,"disponibilidad_pct":98.6},
+            {"id_proyecto":6,"id_reg":2,"usuarios":350000,"disponibilidad_pct":98.5},
+            {"id_proyecto":7,"id_reg":2,"usuarios":180000,"disponibilidad_pct":98.2},
+            {"id_proyecto":8,"id_reg":2,"usuarios":280000,"disponibilidad_pct":98.3},
+            {"id_proyecto":9,"id_reg":2,"usuarios":210000,"disponibilidad_pct":98.2},
+
+            # ================= SOLARES =================
+            {"id_proyecto":20,"id_reg":1,"usuarios":95000,"disponibilidad_pct":99.1},
+            {"id_proyecto":21,"id_reg":1,"usuarios":40000,"disponibilidad_pct":99.0},
+            {"id_proyecto":22,"id_reg":1,"usuarios":80000,"disponibilidad_pct":99.1},
+            {"id_proyecto":23,"id_reg":1,"usuarios":60000,"disponibilidad_pct":99.0},
+            {"id_proyecto":24,"id_reg":1,"usuarios":45000,"disponibilidad_pct":99.1},
+            {"id_proyecto":25,"id_reg":1,"usuarios":35000,"disponibilidad_pct":99.0},
+            {"id_proyecto":26,"id_reg":1,"usuarios":32000,"disponibilidad_pct":99.0},
+            {"id_proyecto":27,"id_reg":1,"usuarios":42000,"disponibilidad_pct":99.1},
+            {"id_proyecto":28,"id_reg":1,"usuarios":30000,"disponibilidad_pct":99.0},
+            {"id_proyecto":29,"id_reg":1,"usuarios":25000,"disponibilidad_pct":99.0},
+
+            # ================= EÓLICOS =================
+            {"id_proyecto":40,"id_reg":1,"usuarios":12000,"disponibilidad_pct":98.9},
+            {"id_proyecto":41,"id_reg":1,"usuarios":260000,"disponibilidad_pct":98.8},
+            {"id_proyecto":42,"id_reg":1,"usuarios":160000,"disponibilidad_pct":98.7},
+            {"id_proyecto":43,"id_reg":1,"usuarios":85000,"disponibilidad_pct":98.9},
+            {"id_proyecto":44,"id_reg":1,"usuarios":65000,"disponibilidad_pct":98.8},
+            {"id_proyecto":45,"id_reg":1,"usuarios":55000,"disponibilidad_pct":98.7},
+
+            # ================= GEOTÉRMICA =================
+            {"id_proyecto":60,"id_reg":1,"usuarios":30000,"disponibilidad_pct":99.3},
+            {"id_proyecto":61,"id_reg":1,"usuarios":28000,"disponibilidad_pct":99.4},
+            {"id_proyecto":62,"id_reg":1,"usuarios":25000,"disponibilidad_pct":99.3},
+            {"id_proyecto":63,"id_reg":1,"usuarios":22000,"disponibilidad_pct":99.4},
+
+            # ================= ZONAS NO INTERCONETADAS =================
+            {"id_proyecto":80,"id_reg":3,"usuarios":10000,"disponibilidad_pct":98.5},
+            {"id_proyecto":81,"id_reg":3,"usuarios":5000,"disponibilidad_pct":98.2},
+            {"id_proyecto":82,"id_reg":3,"usuarios":6000,"disponibilidad_pct":98.3},
+            {"id_proyecto":83,"id_reg":3,"usuarios":12000,"disponibilidad_pct":98.4},
+            {"id_proyecto":84,"id_reg":3,"usuarios":15000,"disponibilidad_pct":98.5},
+            {"id_proyecto":85,"id_reg":3,"usuarios":35000,"disponibilidad_pct":98.6},
+
         ]
     )
 
