@@ -1150,6 +1150,14 @@ def _view_proyectos(d: dict[str, pd.DataFrame]) -> None:
     with col3:
         filter_min_cap = st.number_input("Capacidad mínima (MW)", min_value=0, value=0, step=10)
 
+    anios_costos = sorted(costos["anio"].dropna().unique().tolist())
+    anio_lcoe = st.selectbox(
+        "Año de referencia (LCOE)",
+        anios_costos,
+        index=len(anios_costos) - 1 if anios_costos else 0,
+        help="Cada proyecto tiene LCOE por año. Elige un año para ver una sola tarjeta por proyecto; en **Costos** puedes comparar series o varios años.",
+    )
+
     if filter_tipo is not None:
         proyectos = proyectos[proyectos["id_tipo"] == filter_tipo]
     if filter_depto != "Todos":
@@ -1158,22 +1166,19 @@ def _view_proyectos(d: dict[str, pd.DataFrame]) -> None:
         proyectos = proyectos[proyectos["capacidad_mw"] >= float(filter_min_cap)]
 
     proyectos = proyectos.merge(tipo[["id_tipo_energia", "fuente"]], left_on="id_tipo", right_on="id_tipo_energia", how="left")
-    proyectos = proyectos.merge(costos[["id_proyecto", "lcoe_usd_mwh"]], on="id_proyecto", how="left")
+    costos_anio = costos[costos["anio"] == anio_lcoe][["id_proyecto", "lcoe_usd_mwh"]].drop_duplicates(subset=["id_proyecto"])
+    proyectos = proyectos.merge(costos_anio, on="id_proyecto", how="left")
 
     st.markdown("### Resultados")
+    st.caption(
+        f"Vista **resumen por proyecto** (un bloque por instalación). LCOE mostrado: **{int(anio_lcoe)}**. "
+        "Si cambias el año, solo cambia el costo nivelado; capacidad y ubicación son atributos del proyecto."
+    )
 
-    def _badge_color(fuente: str) -> tuple[str, str]:
-        mapping = {
-            "Hidráulica": ("#dcfce7", "#166534"),
-            "Solar": ("#d1fae5", "#065f46"),
-            "Eólica": ("#ccfbf1", "#0f766e"),
-            "Geotérmica": ("#cffafe", "#155e75"),
-        }
-        return mapping.get(fuente, ("#f3f4f6", "#111827"))
-
-    def _project_card(nombre: str, depto: str, fuente: str, capacidad_mw: float, lcoe: float | None) -> None:
-        bg, fg = _badge_color(fuente)
-        lcoe_txt = "N/A" if lcoe is None or pd.isna(lcoe) else f"${float(lcoe):.2f}"
+    def _project_card(
+        nombre: str, depto: str, fuente: str, capacidad_mw: float, lcoe: float | None, anio_ref: int
+    ) -> None:
+        lcoe_txt = "Sin dato en este año" if lcoe is None or pd.isna(lcoe) else f"${float(lcoe):.2f}"
         st.markdown(
             f"""
             <div class="neo-card" style="padding: 18px;">
@@ -1182,16 +1187,14 @@ def _view_proyectos(d: dict[str, pd.DataFrame]) -> None:
               </div>
               <div style="color: var(--color-text-secondary); font-size: 13px; margin-bottom: 6px;">📍 {depto}</div>
               <div style="color: var(--color-text-secondary); font-size: 13px; margin-bottom: 6px;">⚡ {fuente}</div>
-              <div style="color: var(--color-text-secondary); font-size: 13px; margin-bottom: 12px;">💰 LCOE: {lcoe_txt}</div>
+              <div style="color: var(--color-text-secondary); font-size: 13px; margin-bottom: 12px;">
+                💰 LCOE ({anio_ref}): {lcoe_txt}
+              </div>
               <div style="display:flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
                 <span style="
                   padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 750;
-                  background: {bg}; color: {fg}; border: 1px solid rgba(15,23,42,0.08);
-                ">{fuente}</span>
-                <span style="
-                  padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 750;
                   background: #f3f4f6; color: #111827; border: 1px solid rgba(15,23,42,0.08);
-                ">{int(capacidad_mw)} MW</span>
+                ">Capacidad: {int(capacidad_mw)} MW</span>
               </div>
             </div>
             """,
@@ -1215,12 +1218,16 @@ def _view_proyectos(d: dict[str, pd.DataFrame]) -> None:
                         fuente=str(row["fuente"]) if not pd.isna(row["fuente"]) else "Desconocido",
                         capacidad_mw=float(row["capacidad_mw"]),
                         lcoe=None if pd.isna(row["lcoe_usd_mwh"]) else float(row["lcoe_usd_mwh"]),
+                        anio_ref=int(anio_lcoe),
                     )
         st.markdown("")
 
+    tabla_proy = proyectos[
+        ["id_proyecto", "nombre", "depto", "fuente", "capacidad_mw", "lcoe_usd_mwh"]
+    ].copy()
+    tabla_proy.insert(1, "Año", int(anio_lcoe))
     st.dataframe(
-        proyectos[["id_proyecto", "nombre", "depto", "fuente", "capacidad_mw", "lcoe_usd_mwh"]]
-        .rename(
+        tabla_proy.rename(
             columns={
                 "id_proyecto": "ID",
                 "nombre": "Proyecto",
