@@ -603,7 +603,7 @@ def _format_currency_es_co(amount: float, digits: int = 2) -> str:
     return f"${amount:,.{digits}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def _page_header(title: str, subtitle: str = "Transición Energética 2019-2025") -> None:
+def _page_header(title: str, subtitle: str = "Transición Energética 2020-2026") -> None:
     st.markdown(
         f"""
         <div class="neo-flat" style="padding: 1rem 1.25rem; margin-bottom: 0.9rem;">
@@ -668,7 +668,7 @@ def _view_inicio() -> None:
             EnergyTrans Colombia
           </div>
           <div style="color: var(--color-text-secondary); font-size: 14px; line-height: 1.5;">
-            Este proyecto consolida indicadores clave para explorar la <b>Transición Energética en Colombia (2019–2025)</b>:
+            Este proyecto consolida indicadores clave para explorar la <b>Transición Energética en Colombia (2020–2026)</b>:
             proyectos, costos (LCOE/CAPEX/OPEX), cobertura y marco regulatorio. La app está diseñada para navegación rápida,
             comparaciones visuales y consultas exploratorias.
           </div>
@@ -820,7 +820,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
 
     r1, r2, r3 = st.columns(3)
     with r1:
-        stat_card("🏗️", f"{int(len(proyectos))}", "Proyectos Activos", "↑ 25% vs 2019", positive=True)
+        stat_card("🏗️", f"{int(len(proyectos))}", "Proyectos Activos", "↑ 25% vs 2026", positive=True)
     with r2:
         stat_card("⚡", f"{capacidad_total/1000:.1f} GW", "Capacidad Total", "↑ 15% renovable", positive=True)
     with r3:
@@ -830,7 +830,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
     with r4:
         stat_card("👥", f"{usuarios_total/1_000_000:.1f}M", "Usuarios Beneficiados", "98.5% disponibilidad", positive=True)
     with r5:
-        stat_card("📉", f"${lcoe_promedio:.2f}", "LCOE Promedio", "↓ 12% vs 2019", positive=False)
+        stat_card("📉", f"${lcoe_promedio:.2f}", "LCOE Promedio", "↓ 12% vs 2020", positive=False)
     with r6:
         stat_card("🌿", "73%", "Energía Renovable", "Meta 2025: 80%", positive=True)
 
@@ -1531,7 +1531,7 @@ def main() -> None:
         st.error("Vista no reconocida.")
 
     st.divider()
-    st.caption("© 2024 EnergyTrans Colombia | Transición Energética 2019-2025")
+    st.caption("© 2024 EnergyTrans Colombia | Transición Energética 2020-2026")
 
 
 if __name__ == "__main__":
