@@ -55,7 +55,9 @@ def test_tukey_fence_none_small_n() -> None:
 def test_lcoe_yoy_with_mock_data() -> None:
     d = _load_data()
     note = _interp_lcoe_yoy_global(d["costos"])
-    assert "2024" in note and "2023" in note
+    years = sorted(d["costos"]["anio"].dropna().unique().tolist())
+    assert len(years) >= 2
+    assert str(years[-1]) in note and str(years[-2]) in note
 
 
 def test_lcoe_dashboard_weighted() -> None:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import altair as alt
 import pandas as pd
 import streamlit as st
@@ -523,202 +525,59 @@ def _inject_global_css() -> None:
     )
 
 
-@st.cache_data(show_spinner=False)
-def _load_data() -> dict[str, pd.DataFrame]:
-    regulacion = pd.DataFrame(
-        [
-            {"id_regulacion": 1, "ley": "Ley 1715", "incentivo": "Deducción Renta 50%", "pct_ahorro": 50.0},
-            {"id_regulacion": 2, "ley": "Ley 2099", "incentivo": "Exclusión IVA Bienes/Servicios", "pct_ahorro": 19.0},
-        ]
-    )
+def _matriz_mock_excel_path() -> Path:
+    return Path(__file__).resolve().parent / "csv" / "matriz_mock.xlsx"
 
-    tipo_energia = pd.DataFrame(
-        [
-            {"id_tipo_energia": 1, "fuente": ENERGY_HIDRAULICA, "es_convencional": 1, "descripcion": "Embalses y Filo de agua"},
-            {"id_tipo_energia": 2, "fuente": "Solar", "es_convencional": 0, "descripcion": "Fotovoltaica Utility Scale"},
-            {"id_tipo_energia": 3, "fuente": ENERGY_EOLICA, "es_convencional": 0, "descripcion": "Aerogeneradores Onshore"},
-            {"id_tipo_energia": 4, "fuente": ENERGY_GEOTERMICA, "es_convencional": 0, "descripcion": "Vapor de alta entalpía"},
-        ]
-    )
 
-    proyectos = pd.DataFrame(
-        [
-            # ================= HIDRÁULICA =================
-            {"id_proyecto": 1, "nombre": "Hidroituango", "depto": "Antioquia", "id_tipo": 1, "capacidad_mw": 2400},
-            {"id_proyecto": 2, "nombre": "Guavio", "depto": "Cundinamarca", "id_tipo": 1, "capacidad_mw": 1213},
-            {"id_proyecto": 3, "nombre": "San Carlos", "depto": "Antioquia", "id_tipo": 1, "capacidad_mw": 1240},
-            {"id_proyecto": 4, "nombre": "Sogamoso", "depto": "Santander", "id_tipo": 1, "capacidad_mw": 820},
-            {"id_proyecto": 5, "nombre": "Chivor", "depto": "Boyacá", "id_tipo": 1, "capacidad_mw": 1000},
-            {"id_proyecto": 6, "nombre": "Porce III", "depto": "Antioquia", "id_tipo": 1, "capacidad_mw": 660},
-            {"id_proyecto": 7, "nombre": "Urrá I", "depto": "Córdoba", "id_tipo": 1, "capacidad_mw": 340},
-            {"id_proyecto": 8, "nombre": "Betania", "depto": "Huila", "id_tipo": 1, "capacidad_mw": 540},
-            {"id_proyecto": 9, "nombre": "El Quimbo", "depto": "Huila", "id_tipo": 1, "capacidad_mw": 400},
+def _read_matriz_mock_excel(path: Path) -> dict[str, pd.DataFrame]:
+    """Carga hojas del Excel mock; normaliza tipos y nombres de tecnología para gráficos."""
+    sheets = ("regulacion", "tipo_energia", "proyectos", "costos", "cobertura")
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"No se encontró el archivo de datos: {path}. "
+            "Genérelo con: python scripts/build_matriz_mock_excel.py (desde EnergyTransitionColombia)."
+        )
 
-            # ================= SOLAR =================
-            {"id_proyecto": 20, "nombre": "La Loma Solar", "depto": "Cesar", "id_tipo": 2, "capacidad_mw": 187},
-            {"id_proyecto": 21, "nombre": "Celsia Solar Tolima", "depto": "Tolima", "id_tipo": 2, "capacidad_mw": 80},
-            {"id_proyecto": 22, "nombre": "Bosconia Solar", "depto": "Cesar", "id_tipo": 2, "capacidad_mw": 150},
-            {"id_proyecto": 23, "nombre": "Meta Solar Park", "depto": "Meta", "id_tipo": 2, "capacidad_mw": 120},
-            {"id_proyecto": 24, "nombre": "Valle Solar", "depto": "Valle del Cauca", "id_tipo": 2, "capacidad_mw": 90},
-            {"id_proyecto": 25, "nombre": "Atlántico Solar", "depto": "Atlántico", "id_tipo": 2, "capacidad_mw": 70},
-            {"id_proyecto": 26, "nombre": "Bolívar Solar", "depto": "Bolívar", "id_tipo": 2, "capacidad_mw": 65},
-            {"id_proyecto": 27, "nombre": "Santander Solar", "depto": "Santander", "id_tipo": 2, "capacidad_mw": 85},
-            {"id_proyecto": 28, "nombre": "Cauca Solar", "depto": "Cauca", "id_tipo": 2, "capacidad_mw": 60},
-            {"id_proyecto": 29, "nombre": "Nariño Solar", "depto": "Nariño", "id_tipo": 2, "capacidad_mw": 50},
+    raw = {name: pd.read_excel(path, sheet_name=name) for name in sheets}
 
-            # ================= EÓLICA =================
-            {"id_proyecto": 40, "nombre": "Guajira I", "depto": "La Guajira", "id_tipo": 3, "capacidad_mw": 20},
-            {"id_proyecto": 41, "nombre": "Alpha Wind", "depto": "La Guajira", "id_tipo": 3, "capacidad_mw": 504},
-            {"id_proyecto": 42, "nombre": "Beta Wind", "depto": "La Guajira", "id_tipo": 3, "capacidad_mw": 300},
-            {"id_proyecto": 43, "nombre": "Caribe Wind", "depto": "Atlántico", "id_tipo": 3, "capacidad_mw": 150},
-            {"id_proyecto": 44, "nombre": "Magdalena Wind", "depto": "Magdalena", "id_tipo": 3, "capacidad_mw": 120},
-            {"id_proyecto": 45, "nombre": "Sucre Wind", "depto": "Sucre", "id_tipo": 3, "capacidad_mw": 100},
+    regulacion = raw["regulacion"].copy()
+    regulacion.columns = regulacion.columns.astype(str).str.strip()
+    regulacion["id_regulacion"] = pd.to_numeric(regulacion["id_regulacion"], errors="coerce").astype(int)
+    regulacion["pct_ahorro"] = pd.to_numeric(regulacion["pct_ahorro"], errors="coerce").astype(float)
+    regulacion["ley"] = regulacion["ley"].astype(str).str.strip()
+    regulacion["incentivo"] = regulacion["incentivo"].astype(str).str.strip()
 
-            # ================= GEOTÉRMICA =================
-            {"id_proyecto": 60, "nombre": "Nereidas", "depto": "Caldas", "id_tipo": 4, "capacidad_mw": 50},
-            {"id_proyecto": 61, "nombre": "Nevado Geo", "depto": "Tolima", "id_tipo": 4, "capacidad_mw": 45},
-            {"id_proyecto": 62, "nombre": "Ruiz Geo", "depto": "Caldas", "id_tipo": 4, "capacidad_mw": 40},
-            {"id_proyecto": 63, "nombre": "Azufral Geo", "depto": "Nariño", "id_tipo": 4, "capacidad_mw": 35},
+    tipo_energia = raw["tipo_energia"].copy()
+    tipo_energia.columns = tipo_energia.columns.astype(str).str.strip()
+    tipo_energia["id_tipo_energia"] = pd.to_numeric(tipo_energia["id_tipo_energia"], errors="coerce").astype(int)
+    tipo_energia["es_convencional"] = pd.to_numeric(tipo_energia["es_convencional"], errors="coerce").astype(int)
+    tipo_energia["fuente"] = tipo_energia["fuente"].astype(str).str.strip()
+    tipo_energia["descripcion"] = tipo_energia["descripcion"].astype(str).str.strip()
+    _canon = {1: ENERGY_HIDRAULICA, 2: ENERGY_SOLAR, 3: ENERGY_EOLICA, 4: ENERGY_GEOTERMICA}
+    for tid, lab in _canon.items():
+        tipo_energia.loc[tipo_energia["id_tipo_energia"] == tid, "fuente"] = lab
 
-            # ================= COBERTURA NACIONAL =================
-            {"id_proyecto": 80, "nombre": "Amazonas Solar", "depto": "Amazonas", "id_tipo": 2, "capacidad_mw": 20},
-            {"id_proyecto": 81, "nombre": "Vaupés Solar", "depto": "Vaupés", "id_tipo": 2, "capacidad_mw": 10},
-            {"id_proyecto": 82, "nombre": "Guainía Solar", "depto": "Guainía", "id_tipo": 2, "capacidad_mw": 12},
-            {"id_proyecto": 83, "nombre": "Putumayo Solar", "depto": "Putumayo", "id_tipo": 2, "capacidad_mw": 25},
-            {"id_proyecto": 84, "nombre": "Arauca Solar", "depto": "Arauca", "id_tipo": 2, "capacidad_mw": 30},
-            {"id_proyecto": 85, "nombre": "Casanare Solar", "depto": "Casanare", "id_tipo": 2, "capacidad_mw": 70},
-        ]
-    )
+    proyectos = raw["proyectos"].copy()
+    proyectos.columns = proyectos.columns.astype(str).str.strip()
+    proyectos["id_proyecto"] = pd.to_numeric(proyectos["id_proyecto"], errors="coerce").astype(int)
+    proyectos["id_tipo"] = pd.to_numeric(proyectos["id_tipo"], errors="coerce").astype(int)
+    proyectos["capacidad_mw"] = pd.to_numeric(proyectos["capacidad_mw"], errors="coerce").astype(float)
+    proyectos["nombre"] = proyectos["nombre"].astype(str).str.strip()
+    proyectos["depto"] = proyectos["depto"].astype(str).str.strip()
 
-    costos = pd.DataFrame(
-        [
-            # ================= HIDRÁULICOS =================
-            # Hidroituango (2400 MW)
-            {"id_proyecto":1,"anio":2020,"lcoe_usd_mwh":55,"capex_musd":2600,"opex_musd":78},
-            {"id_proyecto":1,"anio":2021,"lcoe_usd_mwh":54,"capex_musd":2620,"opex_musd":79},
-            {"id_proyecto":1,"anio":2022,"lcoe_usd_mwh":52,"capex_musd":2640,"opex_musd":80},
-            {"id_proyecto":1,"anio":2023,"lcoe_usd_mwh":50,"capex_musd":2660,"opex_musd":82},
-            {"id_proyecto":1,"anio":2024,"lcoe_usd_mwh":49,"capex_musd":2680,"opex_musd":83},
-            {"id_proyecto":1,"anio":2025,"lcoe_usd_mwh":48,"capex_musd":2700,"opex_musd":84},
-            {"id_proyecto":1,"anio":2026,"lcoe_usd_mwh":47,"capex_musd":2720,"opex_musd":86},
+    costos = raw["costos"].copy()
+    costos.columns = costos.columns.astype(str).str.strip()
+    costos["id_proyecto"] = pd.to_numeric(costos["id_proyecto"], errors="coerce").astype(int)
+    costos["anio"] = pd.to_numeric(costos["anio"], errors="coerce").astype(int)
+    for c in ("lcoe_usd_mwh", "capex_musd", "opex_musd"):
+        costos[c] = pd.to_numeric(costos[c], errors="coerce").astype(float)
 
-            # Guavio (1213 MW)
-            {"id_proyecto":2,"anio":2020,"lcoe_usd_mwh":57,"capex_musd":1300,"opex_musd":40},
-            {"id_proyecto":2,"anio":2021,"lcoe_usd_mwh":56,"capex_musd":1310,"opex_musd":41},
-            {"id_proyecto":2,"anio":2022,"lcoe_usd_mwh":54,"capex_musd":1320,"opex_musd":42},
-            {"id_proyecto":2,"anio":2023,"lcoe_usd_mwh":52,"capex_musd":1335,"opex_musd":43},
-            {"id_proyecto":2,"anio":2024,"lcoe_usd_mwh":51,"capex_musd":1350,"opex_musd":44},
-            {"id_proyecto":2,"anio":2025,"lcoe_usd_mwh":50,"capex_musd":1365,"opex_musd":45},
-            {"id_proyecto":2,"anio":2026,"lcoe_usd_mwh":49,"capex_musd":1380,"opex_musd":46},
-
-            # Sogamoso (820 MW)
-            {"id_proyecto":4,"anio":2020,"lcoe_usd_mwh":60,"capex_musd":900,"opex_musd":28},
-            {"id_proyecto":4,"anio":2021,"lcoe_usd_mwh":59,"capex_musd":910,"opex_musd":29},
-            {"id_proyecto":4,"anio":2022,"lcoe_usd_mwh":57,"capex_musd":920,"opex_musd":30},
-            {"id_proyecto":4,"anio":2023,"lcoe_usd_mwh":55,"capex_musd":930,"opex_musd":31},
-            {"id_proyecto":4,"anio":2024,"lcoe_usd_mwh":54,"capex_musd":945,"opex_musd":32},
-            {"id_proyecto":4,"anio":2025,"lcoe_usd_mwh":53,"capex_musd":960,"opex_musd":33},
-            {"id_proyecto":4,"anio":2026,"lcoe_usd_mwh":52,"capex_musd":980,"opex_musd":34},
-
-            # ================= SOLARES =================
-            # La Loma (187 MW)
-            {"id_proyecto":20,"anio":2020,"lcoe_usd_mwh":90,"capex_musd":210,"opex_musd":4.5},
-            {"id_proyecto":20,"anio":2021,"lcoe_usd_mwh":85,"capex_musd":205,"opex_musd":4.3},
-            {"id_proyecto":20,"anio":2022,"lcoe_usd_mwh":80,"capex_musd":200,"opex_musd":4.1},
-            {"id_proyecto":20,"anio":2023,"lcoe_usd_mwh":75,"capex_musd":195,"opex_musd":4.0},
-            {"id_proyecto":20,"anio":2024,"lcoe_usd_mwh":70,"capex_musd":190,"opex_musd":3.9},
-            {"id_proyecto":20,"anio":2025,"lcoe_usd_mwh":65,"capex_musd":188,"opex_musd":3.8},
-            {"id_proyecto":20,"anio":2026,"lcoe_usd_mwh":60,"capex_musd":185,"opex_musd":3.7},
-
-            # Meta Solar (120 MW)
-            {"id_proyecto":23,"anio":2020,"lcoe_usd_mwh":92,"capex_musd":140,"opex_musd":3.2},
-            {"id_proyecto":23,"anio":2021,"lcoe_usd_mwh":87,"capex_musd":135,"opex_musd":3.1},
-            {"id_proyecto":23,"anio":2022,"lcoe_usd_mwh":82,"capex_musd":130,"opex_musd":3.0},
-            {"id_proyecto":23,"anio":2023,"lcoe_usd_mwh":77,"capex_musd":125,"opex_musd":2.9},
-            {"id_proyecto":23,"anio":2024,"lcoe_usd_mwh":72,"capex_musd":122,"opex_musd":2.8},
-            {"id_proyecto":23,"anio":2025,"lcoe_usd_mwh":67,"capex_musd":120,"opex_musd":2.7},
-            {"id_proyecto":23,"anio":2026,"lcoe_usd_mwh":62,"capex_musd":118,"opex_musd":2.6},
-
-            # ================= EÓLICOS =================
-            # Alpha Wind (504 MW)
-            {"id_proyecto":41,"anio":2020,"lcoe_usd_mwh":85,"capex_musd":600,"opex_musd":15},
-            {"id_proyecto":41,"anio":2021,"lcoe_usd_mwh":82,"capex_musd":590,"opex_musd":14.8},
-            {"id_proyecto":41,"anio":2022,"lcoe_usd_mwh":80,"capex_musd":580,"opex_musd":14.5},
-            {"id_proyecto":41,"anio":2023,"lcoe_usd_mwh":78,"capex_musd":570,"opex_musd":14.2},
-            {"id_proyecto":41,"anio":2024,"lcoe_usd_mwh":75,"capex_musd":560,"opex_musd":14},
-            {"id_proyecto":41,"anio":2025,"lcoe_usd_mwh":72,"capex_musd":550,"opex_musd":13.8},
-            {"id_proyecto":41,"anio":2026,"lcoe_usd_mwh":70,"capex_musd":540,"opex_musd":13.5},
-
-            # Caribe Wind (150 MW)
-            {"id_proyecto":43,"anio":2020,"lcoe_usd_mwh":88,"capex_musd":190,"opex_musd":5},
-            {"id_proyecto":43,"anio":2021,"lcoe_usd_mwh":85,"capex_musd":185,"opex_musd":4.9},
-            {"id_proyecto":43,"anio":2022,"lcoe_usd_mwh":82,"capex_musd":180,"opex_musd":4.8},
-            {"id_proyecto":43,"anio":2023,"lcoe_usd_mwh":79,"capex_musd":175,"opex_musd":4.7},
-            {"id_proyecto":43,"anio":2024,"lcoe_usd_mwh":76,"capex_musd":170,"opex_musd":4.6},
-            {"id_proyecto":43,"anio":2025,"lcoe_usd_mwh":73,"capex_musd":168,"opex_musd":4.5},
-            {"id_proyecto":43,"anio":2026,"lcoe_usd_mwh":70,"capex_musd":165,"opex_musd":4.4},
-
-            # ================= GEOTÉRMICA =================
-            # Nereidas (50 MW)
-            {"id_proyecto":60,"anio":2020,"lcoe_usd_mwh":60,"capex_musd":80,"opex_musd":3},
-            {"id_proyecto":60,"anio":2021,"lcoe_usd_mwh":59,"capex_musd":82,"opex_musd":3.1},
-            {"id_proyecto":60,"anio":2022,"lcoe_usd_mwh":58,"capex_musd":84,"opex_musd":3.2},
-            {"id_proyecto":60,"anio":2023,"lcoe_usd_mwh":57,"capex_musd":86,"opex_musd":3.3},
-            {"id_proyecto":60,"anio":2024,"lcoe_usd_mwh":56,"capex_musd":88,"opex_musd":3.4},
-            {"id_proyecto":60,"anio":2025,"lcoe_usd_mwh":55,"capex_musd":90,"opex_musd":3.5},
-            {"id_proyecto":60,"anio":2026,"lcoe_usd_mwh":54,"capex_musd":92,"opex_musd":3.6},
-        ]
-    )
-
-    cobertura = pd.DataFrame(
-        [
-                # ================= HIDRÁULICOS =================
-            {"id_proyecto":1,"id_reg":2,"usuarios":1200000,"disponibilidad_pct":98.7},
-            {"id_proyecto":2,"id_reg":2,"usuarios":620000,"disponibilidad_pct":98.5},
-            {"id_proyecto":3,"id_reg":2,"usuarios":640000,"disponibilidad_pct":98.6},
-            {"id_proyecto":4,"id_reg":2,"usuarios":420000,"disponibilidad_pct":98.4},
-            {"id_proyecto":5,"id_reg":2,"usuarios":520000,"disponibilidad_pct":98.6},
-            {"id_proyecto":6,"id_reg":2,"usuarios":350000,"disponibilidad_pct":98.5},
-            {"id_proyecto":7,"id_reg":2,"usuarios":180000,"disponibilidad_pct":98.2},
-            {"id_proyecto":8,"id_reg":2,"usuarios":280000,"disponibilidad_pct":98.3},
-            {"id_proyecto":9,"id_reg":2,"usuarios":210000,"disponibilidad_pct":98.2},
-
-            # ================= SOLARES =================
-            {"id_proyecto":20,"id_reg":1,"usuarios":95000,"disponibilidad_pct":99.1},
-            {"id_proyecto":21,"id_reg":1,"usuarios":40000,"disponibilidad_pct":99.0},
-            {"id_proyecto":22,"id_reg":1,"usuarios":80000,"disponibilidad_pct":99.1},
-            {"id_proyecto":23,"id_reg":1,"usuarios":60000,"disponibilidad_pct":99.0},
-            {"id_proyecto":24,"id_reg":1,"usuarios":45000,"disponibilidad_pct":99.1},
-            {"id_proyecto":25,"id_reg":1,"usuarios":35000,"disponibilidad_pct":99.0},
-            {"id_proyecto":26,"id_reg":1,"usuarios":32000,"disponibilidad_pct":99.0},
-            {"id_proyecto":27,"id_reg":1,"usuarios":42000,"disponibilidad_pct":99.1},
-            {"id_proyecto":28,"id_reg":1,"usuarios":30000,"disponibilidad_pct":99.0},
-            {"id_proyecto":29,"id_reg":1,"usuarios":25000,"disponibilidad_pct":99.0},
-
-            # ================= EÓLICOS =================
-            {"id_proyecto":40,"id_reg":1,"usuarios":12000,"disponibilidad_pct":98.9},
-            {"id_proyecto":41,"id_reg":1,"usuarios":260000,"disponibilidad_pct":98.8},
-            {"id_proyecto":42,"id_reg":1,"usuarios":160000,"disponibilidad_pct":98.7},
-            {"id_proyecto":43,"id_reg":1,"usuarios":85000,"disponibilidad_pct":98.9},
-            {"id_proyecto":44,"id_reg":1,"usuarios":65000,"disponibilidad_pct":98.8},
-            {"id_proyecto":45,"id_reg":1,"usuarios":55000,"disponibilidad_pct":98.7},
-
-            # ================= GEOTÉRMICA =================
-            {"id_proyecto":60,"id_reg":1,"usuarios":30000,"disponibilidad_pct":99.3},
-            {"id_proyecto":61,"id_reg":1,"usuarios":28000,"disponibilidad_pct":99.4},
-            {"id_proyecto":62,"id_reg":1,"usuarios":25000,"disponibilidad_pct":99.3},
-            {"id_proyecto":63,"id_reg":1,"usuarios":22000,"disponibilidad_pct":99.4},
-
-            # ================= ZONAS NO INTERCONETADAS =================
-            {"id_proyecto":80,"id_reg":3,"usuarios":10000,"disponibilidad_pct":98.5},
-            {"id_proyecto":81,"id_reg":3,"usuarios":5000,"disponibilidad_pct":98.2},
-            {"id_proyecto":82,"id_reg":3,"usuarios":6000,"disponibilidad_pct":98.3},
-            {"id_proyecto":83,"id_reg":3,"usuarios":12000,"disponibilidad_pct":98.4},
-            {"id_proyecto":84,"id_reg":3,"usuarios":15000,"disponibilidad_pct":98.5},
-            {"id_proyecto":85,"id_reg":3,"usuarios":35000,"disponibilidad_pct":98.6},
-
-        ]
-    )
+    cobertura = raw["cobertura"].copy()
+    cobertura.columns = cobertura.columns.astype(str).str.strip()
+    cobertura["id_proyecto"] = pd.to_numeric(cobertura["id_proyecto"], errors="coerce").astype(int)
+    cobertura["id_reg"] = pd.to_numeric(cobertura["id_reg"], errors="coerce").astype(int)
+    cobertura["usuarios"] = pd.to_numeric(cobertura["usuarios"], errors="coerce").astype(int)
+    cobertura["disponibilidad_pct"] = pd.to_numeric(cobertura["disponibilidad_pct"], errors="coerce").astype(float)
 
     return {
         "regulacion": regulacion,
@@ -727,6 +586,11 @@ def _load_data() -> dict[str, pd.DataFrame]:
         "costos": costos,
         "cobertura": cobertura,
     }
+
+
+@st.cache_data(show_spinner=False)
+def _load_data() -> dict[str, pd.DataFrame]:
+    return _read_matriz_mock_excel(_matriz_mock_excel_path())
 
 
 def _format_currency_es_co(amount: float, digits: int = 2) -> str:
@@ -846,7 +710,7 @@ def _view_inicio() -> None:
               <div style="font-weight: 900; color: var(--color-text-primary);">🗂️ Datos</div>
               <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.55;">
                 Fuentes esperadas: MinEnergía / UPME.<br/>
-                En esta demo, los datos son <b>mock</b> para mostrar la experiencia y el modelo dimensional.
+                Los datos se cargan desde <b>csv/matriz_mock.xlsx</b> (sintéticos); edita ese archivo para cambiar la muestra.
               </div>
             </div>
             """,
@@ -1000,6 +864,10 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
         .rename(columns={"capacidad_mw": "capacidad_mw_total"})
     )
     capacidad_por_tipo["fuente"] = capacidad_por_tipo["fuente"].astype(str).str.strip()
+    _sum_mw_tipo = float(capacidad_por_tipo["capacidad_mw_total"].sum())
+    capacidad_por_tipo["pct_del_total_mw"] = (
+        100.0 * capacidad_por_tipo["capacidad_mw_total"] / _sum_mw_tipo if _sum_mw_tipo > 0 else 0.0
+    )
 
     base_lcoe = (
         costos.loc[costos["anio"] == anio_kpi]
@@ -1014,6 +882,10 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
         rows_lcoe.append({"fuente": fuente, "lcoe_promedio": lcoe_mean, "lcoe_pond_mw": pond})
     lcoe_por_tipo = pd.DataFrame(rows_lcoe)
     lcoe_por_tipo["fuente"] = lcoe_por_tipo["fuente"].astype(str).str.strip()
+    lcoe_por_tipo = lcoe_por_tipo.merge(
+        capacidad_por_tipo[["fuente", "pct_del_total_mw"]], on="fuente", how="left"
+    )
+    lcoe_por_tipo["pct_del_total_mw"] = lcoe_por_tipo["pct_del_total_mw"].fillna(0.0)
 
     capex_opex = costos_kpi.merge(proyectos[["id_proyecto", "nombre"]], on="id_proyecto", how="left")[
         ["nombre", "capex_musd", "opex_musd"]
@@ -1022,6 +894,19 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
     cobertura_proyecto = cobertura.merge(proyectos[["id_proyecto", "nombre"]], on="id_proyecto", how="left")[
         ["nombre", "usuarios"]
     ]
+    _sum_u_dash = float(cobertura_proyecto["usuarios"].sum())
+    cobertura_proyecto["pct_del_total_usuarios"] = (
+        100.0 * cobertura_proyecto["usuarios"] / _sum_u_dash if _sum_u_dash > 0 else 0.0
+    )
+
+    _sum_capex = float(capex_opex["capex_musd"].sum())
+    _sum_opex = float(capex_opex["opex_musd"].sum())
+    capex_opex["pct_capex_muestra"] = (
+        100.0 * capex_opex["capex_musd"] / _sum_capex if _sum_capex > 0 else 0.0
+    )
+    capex_opex["pct_opex_muestra"] = (
+        100.0 * capex_opex["opex_musd"] / _sum_opex if _sum_opex > 0 else 0.0
+    )
 
     col_left, col_right = st.columns(2)
     with col_left:
@@ -1031,7 +916,11 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             .encode(
                 theta=alt.Theta("capacidad_mw_total:Q", title="Capacidad (MW)"),
                 color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale(), sort=ENERGY_COLOR_DOMAIN),
-                tooltip=["fuente:N", alt.Tooltip("capacidad_mw_total:Q", title="Capacidad (MW)")],
+                tooltip=[
+                    "fuente:N",
+                    alt.Tooltip("capacidad_mw_total:Q", title="Capacidad (MW)", format=",.0f"),
+                    alt.Tooltip("pct_del_total_mw:Q", title="% del total MW", format=".2f"),
+                ],
             )
             .properties(height=320, title="📊 Capacidad por tipo de energía")
         )
@@ -1059,7 +948,11 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
                 x=alt.X("fuente:N", title=None),
                 y=alt.Y("lcoe_promedio:Q", title="USD/MWh"),
                 color=alt.Color("fuente:N", legend=alt.Legend(title="Tipo"), scale=_energy_color_scale(), sort=ENERGY_COLOR_DOMAIN),
-                tooltip=["fuente:N", alt.Tooltip("lcoe_promedio:Q", title="LCOE", format=".2f")],
+                tooltip=[
+                    "fuente:N",
+                    alt.Tooltip("lcoe_promedio:Q", title="LCOE (USD/MWh)", format=".2f"),
+                    alt.Tooltip("pct_del_total_mw:Q", title="% MW en la muestra", format=".2f"),
+                ],
             )
             .properties(height=320, title="💰 LCOE por tecnología")
         )
@@ -1074,21 +967,46 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
 
     col_left, col_right = st.columns(2)
     with col_left:
-        base = alt.Chart(capex_opex).encode(x=alt.X("nombre:N", title=None))
+        capex_long = capex_opex.melt(
+            id_vars=["nombre", "pct_capex_muestra", "pct_opex_muestra"],
+            value_vars=["capex_musd", "opex_musd"],
+            var_name="tipo_costo",
+            value_name="musd",
+        )
+        capex_long["tipo_label"] = capex_long["tipo_costo"].map(
+            {"capex_musd": "CAPEX", "opex_musd": "OPEX"}
+        )
+        capex_long["pct_del_subtotal"] = capex_long.apply(
+            lambda r: float(r["pct_capex_muestra"]) if r["tipo_costo"] == "capex_musd" else float(r["pct_opex_muestra"]),
+            axis=1,
+        )
         chart = (
-            alt.layer(
-                base.mark_bar(color="#0284c7").encode(y=alt.Y("capex_musd:Q", title="M USD"), tooltip=["nombre:N", "capex_musd:Q"]),
-                base.mark_bar(color="#f59e0b").encode(y=alt.Y("opex_musd:Q"), tooltip=["nombre:N", "opex_musd:Q"]),
+            alt.Chart(capex_long)
+            .mark_bar()
+            .encode(
+                x=alt.X("nombre:N", title=None, sort=None),
+                xOffset=alt.XOffset("tipo_label:N", title=""),
+                y=alt.Y("musd:Q", title="M USD"),
+                color=alt.Color(
+                    "tipo_label:N",
+                    title="",
+                    scale=alt.Scale(domain=["CAPEX", "OPEX"], range=["#0284c7", "#f59e0b"]),
+                ),
+                tooltip=[
+                    "nombre:N",
+                    "tipo_label:N",
+                    alt.Tooltip("musd:Q", title="M USD", format=".2f"),
+                    alt.Tooltip("pct_del_subtotal:Q", title="% del total (CAPEX u OPEX)", format=".2f"),
+                ],
             )
-            .resolve_scale(y="shared")
-            .properties(height=320, title="📈 Inversión CAPEX vs OPEX")
+            .properties(height=360, title="📈 CAPEX vs OPEX por proyecto")
         )
         st.altair_chart(chart, use_container_width=True)
         _chart_interp(
             _interp_capex_opex_cross(capex_opex),
             "**Qué muestra:** **CAPEX** (azul) y **OPEX** (ámbar) en **M USD** por proyecto presente en costos.\n\n"
-            "**Cómo leerlo:** contraste entre **desembolso de inversión** y **gasto operativo**; no hay proporcionalidad esperada por definición.\n\n"
-            "**Matices:** escala compartida puede **comprimir** barras de proyectos pequeños frente a mayores.",
+            "**Cómo leerlo:** barras **agrupadas** comparan inversión y gasto operativo por proyecto.\n\n"
+            "**Matices:** muchos proyectos en eje X pueden requerir **scroll** o filtro en la vista Costos.",
             export_key="dash_capex_opex",
         )
 
@@ -1099,7 +1017,11 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             .encode(
                 theta=alt.Theta("usuarios:Q", title="Usuarios"),
                 color=alt.Color("nombre:N", title="Proyecto"),
-                tooltip=["nombre:N", alt.Tooltip("usuarios:Q", title="Usuarios")],
+                tooltip=[
+                    "nombre:N",
+                    alt.Tooltip("usuarios:Q", title="Usuarios", format=",.0f"),
+                    alt.Tooltip("pct_del_total_usuarios:Q", title="% del total usuarios", format=".2f"),
+                ],
             )
             .properties(height=320, title="👥 Cobertura por proyecto")
         )
@@ -1314,7 +1236,19 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
 
     # Orden para mejorar lectura (igual para chart y tabla)
     sort_col = "lcoe_usd_mwh" if metric_sel == "LCOE" else "capex_musd"
-    costos_f = costos_f.sort_values(sort_col, ascending=(order_sel == "Asc"))
+    costos_f = costos_f.sort_values(sort_col, ascending=(order_sel == "Asc")).copy()
+    if not costos_f.empty:
+        mx_lcoe = float(costos_f["lcoe_usd_mwh"].max())
+        costos_f["pct_lcoe_vs_max_vista"] = (
+            100.0 * costos_f["lcoe_usd_mwh"] / mx_lcoe if mx_lcoe > 0 else 0.0
+        )
+        sum_cx = float(costos_f["capex_musd"].sum())
+        costos_f["pct_capex_del_total_vista"] = (
+            100.0 * costos_f["capex_musd"] / sum_cx if sum_cx > 0 else 0.0
+        )
+    else:
+        costos_f["pct_lcoe_vs_max_vista"] = pd.Series(dtype=float)
+        costos_f["pct_capex_del_total_vista"] = pd.Series(dtype=float)
 
     st.markdown("### Gráficas")
     col1, col2 = st.columns(2)
@@ -1326,7 +1260,12 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
                 x=alt.X("nombre:N", title=None, sort=costos_f["nombre"].tolist()),
                 y=alt.Y("lcoe_usd_mwh:Q", title="USD/MWh"),
                 color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale(), sort=ENERGY_COLOR_DOMAIN),
-                tooltip=["nombre:N", "fuente:N", alt.Tooltip("lcoe_usd_mwh:Q", title="LCOE")],
+                tooltip=[
+                    "nombre:N",
+                    "fuente:N",
+                    alt.Tooltip("lcoe_usd_mwh:Q", title="LCOE (USD/MWh)", format=".2f"),
+                    alt.Tooltip("pct_lcoe_vs_max_vista:Q", title="% vs máx. LCOE (vista)", format=".2f"),
+                ],
             )
             .properties(height=320, title=f"📊 LCOE comparativo {anio_sel}")
         )
@@ -1346,7 +1285,12 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
                 x=alt.X("nombre:N", title=None, sort=costos_f["nombre"].tolist()),
                 y=alt.Y("capex_musd:Q", title="M USD"),
                 color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale(), sort=ENERGY_COLOR_DOMAIN),
-                tooltip=["nombre:N", "fuente:N", alt.Tooltip("capex_musd:Q", title="CAPEX (M USD)")],
+                tooltip=[
+                    "nombre:N",
+                    "fuente:N",
+                    alt.Tooltip("capex_musd:Q", title="CAPEX (M USD)", format=".2f"),
+                    alt.Tooltip("pct_capex_del_total_vista:Q", title="% del CAPEX total (vista)", format=".2f"),
+                ],
             )
             .properties(height=320, title="💵 CAPEX por proyecto")
         )
@@ -1390,17 +1334,32 @@ def _view_cobertura(d: dict[str, pd.DataFrame]) -> None:
     )
     cobertura["fuente"] = cobertura["fuente"].astype(str).str.strip()
 
+    cobertura_viz = cobertura.copy()
+    _u_tot = float(cobertura_viz["usuarios"].sum())
+    cobertura_viz["pct_usuarios_total"] = (
+        100.0 * cobertura_viz["usuarios"] / _u_tot if _u_tot > 0 else 0.0
+    )
+    _dmax = float(cobertura_viz["disponibilidad_pct"].max())
+    cobertura_viz["pct_disp_vs_max"] = (
+        100.0 * cobertura_viz["disponibilidad_pct"] / _dmax if _dmax > 0 else 0.0
+    )
+
     st.markdown("### Gráficas")
     col1, col2 = st.columns(2)
     with col1:
         chart = (
-            alt.Chart(cobertura)
+            alt.Chart(cobertura_viz)
             .mark_bar()
             .encode(
                 x=alt.X("nombre:N", title=None),
                 y=alt.Y("usuarios:Q", title="Usuarios"),
                 color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale(), sort=ENERGY_COLOR_DOMAIN),
-                tooltip=["nombre:N", "fuente:N", alt.Tooltip("usuarios:Q", title="Usuarios")],
+                tooltip=[
+                    "nombre:N",
+                    "fuente:N",
+                    alt.Tooltip("usuarios:Q", title="Usuarios", format=",.0f"),
+                    alt.Tooltip("pct_usuarios_total:Q", title="% del total usuarios", format=".2f"),
+                ],
             )
             .properties(height=320, title="👥 Usuarios por proyecto")
         )
@@ -1420,7 +1379,7 @@ def _view_cobertura(d: dict[str, pd.DataFrame]) -> None:
             export_key="cobertura_usuarios",
         )
     with col2:
-        base = alt.Chart(cobertura).encode(
+        base = alt.Chart(cobertura_viz).encode(
             x=alt.X("nombre:N", title=None),
             y=alt.Y("disponibilidad_pct:Q", title="Disponibilidad (%)", scale=alt.Scale(domain=[95, 100])),
         )
@@ -1428,7 +1387,12 @@ def _view_cobertura(d: dict[str, pd.DataFrame]) -> None:
             base.mark_line(color="#006b3f", opacity=0.65),
             base.mark_point(filled=True, size=80).encode(
                 color=alt.Color("fuente:N", title="Tipo", scale=_energy_color_scale(), sort=ENERGY_COLOR_DOMAIN),
-                tooltip=["nombre:N", "fuente:N", alt.Tooltip("disponibilidad_pct:Q", title="Disponibilidad (%)")],
+                tooltip=[
+                    "nombre:N",
+                    "fuente:N",
+                    alt.Tooltip("disponibilidad_pct:Q", title="Disponibilidad (%)", format=".2f"),
+                    alt.Tooltip("pct_disp_vs_max:Q", title="% vs máx. en vista", format=".2f"),
+                ],
             ),
         ).properties(height=320, title="✅ Disponibilidad (%)")
         st.altair_chart(chart, use_container_width=True)
@@ -1479,13 +1443,20 @@ def _view_regulacion(d: dict[str, pd.DataFrame]) -> None:
         )
 
     st.markdown("### Impacto de incentivos")
+    reg_viz = regulacion.copy()
+    _sah = float(reg_viz["pct_ahorro"].sum())
+    reg_viz["pct_participacion_suma"] = 100.0 * reg_viz["pct_ahorro"] / _sah if _sah > 0 else 0.0
     chart = (
-        alt.Chart(regulacion)
+        alt.Chart(reg_viz)
         .mark_arc(innerRadius=60)
         .encode(
             theta=alt.Theta("pct_ahorro:Q", title="% Ahorro"),
             color=alt.Color("ley:N", title="Ley"),
-            tooltip=["ley:N", alt.Tooltip("pct_ahorro:Q", title="% Ahorro")],
+            tooltip=[
+                "ley:N",
+                alt.Tooltip("pct_ahorro:Q", title="% Ahorro declarado", format=".2f"),
+                alt.Tooltip("pct_participacion_suma:Q", title="% de la suma de % ahorro", format=".2f"),
+            ],
         )
         .properties(height=340)
     )
@@ -1644,14 +1615,25 @@ def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
     st.code(sql, language="sql")
     st.dataframe(result_df, use_container_width=True, hide_index=True)
 
+    result_viz = result_df.copy()
+    _tv = float(pd.to_numeric(result_viz["value"], errors="coerce").fillna(0).sum())
+    if _tv > 0:
+        result_viz["pct_del_total"] = 100.0 * pd.to_numeric(result_viz["value"], errors="coerce").fillna(0) / _tv
+    else:
+        result_viz["pct_del_total"] = 0.0
+
     chart = (
-        alt.Chart(result_df)
+        alt.Chart(result_viz)
         .mark_bar()
         .encode(
             x=alt.X("label:N", title=None),
             y=alt.Y("value:Q", title="Valor"),
             color=alt.Color("label:N", legend=None, scale=alt.Scale(scheme="tableau10")),
-            tooltip=["label:N", alt.Tooltip("value:Q", title="Valor")],
+            tooltip=[
+                "label:N",
+                alt.Tooltip("value:Q", title="Valor", format=".4g"),
+                alt.Tooltip("pct_del_total:Q", title="% del total (valores en pantalla)", format=".2f"),
+            ],
         )
         .properties(height=320, title="Visualización de resultados")
     )
@@ -1670,7 +1652,14 @@ def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
 def main() -> None:
     st.set_page_config(page_title="EnergyTrans Colombia", page_icon="⚡", layout="wide")
     _inject_global_css()
-    d = _load_data()
+    try:
+        d = _load_data()
+    except FileNotFoundError as e:
+        st.error(str(e))
+        st.stop()
+    except Exception as e:
+        st.error(f"Error al leer `csv/matriz_mock.xlsx`: {e}")
+        st.stop()
 
     if "view" not in st.session_state:
         st.session_state["view"] = "inicio"
