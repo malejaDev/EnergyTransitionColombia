@@ -918,6 +918,14 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
 
     st.markdown("### Resumen")
 
+    n_renov_mw = float(
+        proyectos.merge(tipo, left_on="id_tipo", right_on="id_tipo_energia", how="left")
+        .loc[lambda x: x["es_convencional"].astype(int) == 0, "capacidad_mw"]
+        .sum()
+    )
+    pct_renov_cap = 100.0 * n_renov_mw / capacidad_total if capacidad_total > 0 else 0.0
+    disp_prom = float(cobertura["disponibilidad_pct"].mean()) if len(cobertura) else float("nan")
+
     def stat_card(icon: str, value: str, label: str, change: str, positive: bool = True) -> None:
         change_color = "var(--color-accent-main)" if positive else "#ea580c"
         st.markdown(
@@ -962,7 +970,27 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
     with r5:
         stat_card("📉", f"${lcoe_promedio:.2f}", "LCOE Promedio", "↓ 12% vs 2020", positive=False)
     with r6:
-        stat_card("🌿", "73%", "Energía Renovable", "Meta 2025: 80%", positive=True)
+        stat_card("🌿", f"{pct_renov_cap:.0f}%", "Energía Renovable", "Meta ilustrativa: 80%", positive=True)
+
+    inv_b = inversion_total / 1000.0
+    st.markdown(
+        f"""
+        <div class="neo-card" style="padding: 14px 16px; margin: 14px 0 18px 0;">
+          <div style="font-weight: 800; font-size: 14px; color: var(--color-text-primary); margin-bottom: 6px;">
+            Análisis
+          </div>
+          <div style="color: var(--color-text-secondary); font-size: 13px; line-height: 1.55;">
+            Con las tarjetas anteriores se resume el <b>mock</b> cargado en la app: <b>{int(len(proyectos))}</b> proyectos,
+            <b>{capacidad_total/1000:.1f} GW</b> de capacidad instalada en la muestra y <b>${inv_b:.1f}B</b> como suma de CAPEX (M USD) en <b>{anio_kpi}</b>.
+            El <b>LCOE promedio</b> (<b>${lcoe_promedio:.2f}</b> USD/MWh) es la media simple de los proyectos con costo en ese año.
+            <b>{usuarios_total/1_000_000:.1f} M</b> usuarios en cobertura, con disponibilidad media <b>{disp_prom:.1f}%</b>;
+            el <b>{pct_renov_cap:.0f}%</b> de renovables es la participación en MW de solar, eólica y geotermia frente al total.
+            <i>Las frases bajo cada KPI (flechas, porcentajes) son solo decoración de demo, no series calculadas.</i>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.markdown("### Mix energético Colombia")
     capacidad_por_tipo = (
