@@ -523,6 +523,7 @@ def _inject_global_css() -> None:
     )
 
 
+@st.cache_data(show_spinner=False)
 def _load_data() -> dict[str, pd.DataFrame]:
     regulacion = pd.DataFrame(
         [
@@ -726,11 +727,6 @@ def _load_data() -> dict[str, pd.DataFrame]:
         "costos": costos,
         "cobertura": cobertura,
     }
-
-
-@st.cache_data(show_spinner=False)
-def _get_data() -> dict[str, pd.DataFrame]:
-    return _load_data()
 
 
 def _format_currency_es_co(amount: float, digits: int = 2) -> str:
@@ -1639,7 +1635,7 @@ def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
 def main() -> None:
     st.set_page_config(page_title="EnergyTrans Colombia", page_icon="⚡", layout="wide")
     _inject_global_css()
-    d = _get_data()
+    d = _load_data()
 
     if "view" not in st.session_state:
         st.session_state["view"] = "inicio"
