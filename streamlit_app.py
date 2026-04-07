@@ -431,16 +431,225 @@ def _interp_consulta_resultado(result_df: pd.DataFrame, query_type: str) -> str:
     return f"Valor **máximo** en **{lbl}**: ~{_fmt_qty_es(val)} (unidad según tipo de consulta)."
 
 
-def _chart_interp(resumen_datos: str, notas_metodologicas: str = "", export_key: str | None = None) -> None:
-    """Resumen a partir del dataframe de la gráfica; `export_key` único habilita descarga .md."""
+def _prospectiva_capacidad_por_tipo(df: pd.DataFrame) -> str:
+    if df is None or df.empty or "capacidad_mw_total" not in df.columns:
+        return "_Sin datos suficientes para una lectura prospectiva._"
+    d = df.sort_values("capacidad_mw_total", ascending=False).copy()
+    tot = float(d["capacidad_mw_total"].sum())
+    if tot <= 0:
+        return "_Totales nulos; no se infiere escenario._"
+    top = d.iloc[0]
+    pct = 100.0 * float(top["capacidad_mw_total"]) / tot
+    fuente = str(top["fuente"])
+    parts: list[str] = []
+    if pct >= 52:
+        parts.append(
+            f"**Escenario base (datos en pantalla):** **{fuente}** aporta ~**{_fmt_qty_es(pct)}%** de los MW mostrados. "
+            f"Si la inversión futura repitiera esta estructura, la **robustez** del portafolio dependería en gran medida del desempeño y la regulación de esa tecnología dominante."
+        )
+        parts.append(
+            "**Señal:** conviene simular entradas de MW en otras tecnologías para reducir riesgo de concentración ante eventos climáticos, hidrológicos o de precios."
+        )
+    else:
+        parts.append(
+            "**Escenario base:** el mix mostrado está **relativamente repartido** entre tecnologías; la transición puede apoyarse en varios vectores si se mantienen tasas de entrada similares."
+        )
+    if len(d) >= 2:
+        seg = d.iloc[1]
+        p2 = 100.0 * float(seg["capacidad_mw_total"]) / tot
+        parts.append(
+            f"**Contraste:** la segunda fuerza es **{seg['fuente']}** (~**{_fmt_qty_es(p2)}%**). "
+            f"Si **{fuente}** desacelera, **{seg['fuente']}** sería el principal candidato a ganar peso relativo en un escenario de sustitución gradual."
+        )
+    return "\n\n".join(parts)
+
+
+def _prospectiva_lcoe_por_tipo(df: pd.DataFrame) -> str:
+    if df is None or df.empty or "lcoe_promedio" not in df.columns:
+        return "_Sin datos suficientes para una lectura prospectiva._"
+    d = df.dropna(subset=["lcoe_promedio"]).copy()
+    if d.empty:
+        return "_Sin LCOE válidos._"
+    i_min = int(d["lcoe_promedio"].idxmin())
+    i_max = int(d["lcoe_promedio"].idxmax())
+    r_lo = d.loc[i_min]
+    r_hi = d.loc[i_max]
+    spread = float(r_hi["lcoe_promedio"]) - float(r_lo["lcoe_promedio"])
+    parts = [
+        f"**Competitividad relativa:** en la vista actual, **{r_lo['fuente']}** muestra el LCOE medio simple más bajo (~**{_fmt_qty_es(float(r_lo['lcoe_promedio']))}** USD/MWh) "
+        f"y **{r_hi['fuente']}** el más alto (~**{_fmt_qty_es(float(r_hi['lcoe_promedio']))}** USD/MWh); brecha ~**{_fmt_qty_es(spread)}** USD/MWh."
+    ]
+    parts.append(
+        "**Prospectiva cualitativa:** si los costos de las renovables siguen una trayectoria de convergencia, las tecnologías con LCOE más alto en esta muestra serían las primeras beneficiadas por **aprendizaje, escala o subasta**; "
+        "la prioridad de despacho económico tendería a favorecer primero a las barras más bajas **salvo** restricciones de firmeza o red."
+    )
+    if "lcoe_pond_mw" in d.columns and d["lcoe_pond_mw"].notna().any():
+        parts.append(
+            "**Indicador a vigilar:** compare el LCOE simple con el **ponderado por MW** en el resumen superior; si difieren mucho, el costo “promio” del tipo está arrastrado por pocos proyectos grandes."
+        )
+    return "\n\n".join(parts)
+
+
+def _prospectiva_capex_opex(df: pd.DataFrame) -> str:
+    if df is None or df.empty:
+        return "_Sin proyectos con costos para proyectar._"
+    need = {"nombre", "capex_musd", "opex_musd"}
+    if not need.issubset(df.columns):
+        return "_Faltan columnas CAPEX/OPEX._"
+    d = df[list(need)].dropna().copy()
+    if d.empty:
+        return "_Sin pares CAPEX/OPEX._"
+    d["ratio_opex_capex"] = d["opex_musd"] / d["capex_musd"].replace(0, float("nan"))
+    r_valid = d.dropna(subset=["ratio_opex_capex"])
+    if r_valid.empty:
+        return "_Ratios OPEX/CAPEX no calculables._"
+    rmx = r_valid.loc[r_valid["ratio_opex_capex"].idxmax()]
+    parts = [
+        "**Estructura de costos:** proyectos con **ratio OPEX/CAPEX** alto implican mayor peso del **gasto recurrente** en la vida útil; con CAPEX ya hundido, el flujo futuro depende más de eficiencia operativa y contratos."
+    ]
+    if pd.notna(rmx["ratio_opex_capex"]):
+        parts.append(
+            f"**Caso extremo en vista:** **{rmx['nombre']}** con ratio OPEX/CAPEX ~**{_fmt_qty_es(float(rmx['ratio_opex_capex']), 3)}** "
+            f"(sensible a supuestos de OPEX anual y CAPEX contable del mock)."
+        )
+    parts.append(
+        "**Prospectiva:** si se incorporan nuevos proyectos con CAPEX elevado y OPEX bajo, el portafolio mostrado tendería a **trasladar el riesgo al periodo de construcción**; lo contrario, a **operación**."
+    )
+    return "\n\n".join(parts)
+
+
+def _prospectiva_usuarios_por_proyecto(df: pd.DataFrame, cat_col: str = "nombre", val_col: str = "usuarios") -> str:
+    if df is None or df.empty or cat_col not in df.columns or val_col not in df.columns:
+        return "_Sin datos de usuarios para inferir escenario._"
+    d = df[[cat_col, val_col]].dropna(subset=[val_col]).copy()
+    if d.empty:
+        return "_Sin valores de usuarios._"
+    tot = float(d[val_col].sum())
+    if tot <= 0:
+        return "_Total de usuarios nulo._"
+    top = d.loc[d[val_col].idxmax()]
+    pct = 100.0 * float(top[val_col]) / tot
+    parts = [
+        f"**Concentración de cobertura:** **{top[cat_col]}** concentra ~**{_fmt_qty_es(pct)}%** de los usuarios agregados en esta vista."
+    ]
+    if pct >= 40:
+        parts.append(
+            "**Prospectiva:** una interrupción o degradación de servicio en ese proyecto afectaría una fracción grande del subtotal mostrado; en planeación de red o mitigación conviene diversificar **puntos de suministro equivalentes**."
+        )
+    else:
+        parts.append(
+            "**Prospectiva:** la carga de usuarios está más repartida; el riesgo operativo se **diluye** entre varios activos visibles."
+        )
+    return "\n\n".join(parts)
+
+
+def _prospectiva_costos_proyecto(df: pd.DataFrame, metric: str, anio: int) -> str:
+    if df is None or df.empty:
+        return "_Sin proyectos en el filtro; ajuste la selección para obtener lectura prospectiva._"
+    col = "lcoe_usd_mwh" if metric == "lcoe" else "capex_musd"
+    if col not in df.columns:
+        return "_Métrica no disponible._"
+    s = pd.to_numeric(df[col], errors="coerce").dropna()
+    if len(s) < 1:
+        return "_Sin valores numéricos._"
+    mu, sig = float(s.mean()), float(s.std(ddof=0)) if len(s) > 1 else 0.0
+    parts = [
+        f"**Año {anio} (vista filtrada):** media ~**{_fmt_qty_es(mu)}** y dispersión (desv. típica) ~**{_fmt_qty_es(sig)}** en la métrica mostrada, sobre **{len(s)}** proyectos."
+    ]
+    if metric == "lcoe":
+        parts.append(
+            "**Prospectiva:** si el conjunto filtrado es representativo de nuevas entradas, los proyectos **por encima de la media** serían candidatos a mejora por **subasta, tecnología o factor de planta** antes que escalar volumen."
+        )
+    else:
+        parts.append(
+            "**Prospectiva:** el CAPEX relativo ordena la **escala de desembolso**; proyectos que concentren mucho CAPEX en la vista condicionarían la curva de inversión agregada del periodo si se replicara el mix."
+        )
+    return "\n\n".join(parts)
+
+
+def _prospectiva_disponibilidad(df: pd.DataFrame) -> str:
+    if df is None or df.empty or "disponibilidad_pct" not in df.columns:
+        return "_Sin serie de disponibilidad._"
+    s = pd.to_numeric(df["disponibilidad_pct"], errors="coerce").dropna()
+    if s.empty:
+        return "_Sin valores._"
+    mn, mx, mu = float(s.min()), float(s.max()), float(s.mean())
+    amp = mx - mn
+    parts = [
+        f"**Banda observada:** disponibilidad entre **{_fmt_qty_es(mn, 2)}%** y **{_fmt_qty_es(mx, 2)}%** (media ~**{_fmt_qty_es(mu, 2)}%**)."
+    ]
+    if amp < 0.35:
+        parts.append(
+            "**Prospectiva:** valores muy alineados sugieren **poca diferenciación operativa** en el mock; ante datos reales, un rango tan estrecho podría ocultar **outliers** o una métrica saturada —conviene segmentar por tecnología o antigüedad."
+        )
+    else:
+        parts.append(
+            "**Prospectiva:** la dispersión visible permite priorizar **auditorías o mantenimiento** en los proyectos de cola inferior sin asumir el mismo riesgo para todo el conjunto."
+        )
+    return "\n\n".join(parts)
+
+
+def _prospectiva_regulacion(df: pd.DataFrame) -> str:
+    if df is None or df.empty or "pct_ahorro" not in df.columns:
+        return "_Sin marco normativo numérico._"
+    d = df.sort_values("pct_ahorro", ascending=False)
+    top = d.iloc[0]
+    parts = [
+        f"**Incentivo dominante en el gráfico:** **{top['ley']}** con **{_fmt_qty_es(float(top['pct_ahorro']))}%** de ahorro declarado en el dataset."
+    ]
+    parts.append(
+        "**Prospectiva:** si el diseño de política pública mantiene ese peso, los proyectos elegibles bajo esa ley tendrían **ventaja de rentabilidad after-tax** relativa; "
+        "cualquier **reforma** que reduzca ese porcentaje movería la frontera de inversión hacia tecnologías menos dependientes del incentivo."
+    )
+    return "\n\n".join(parts)
+
+
+def _prospectiva_consulta_resultado(df: pd.DataFrame) -> str:
+    if df is None or df.empty or not {"label", "value"}.issubset(df.columns):
+        return "_Resultado vacío o formato no estándar._"
+    v = pd.to_numeric(df["value"], errors="coerce").dropna()
+    if v.empty:
+        return "_Valores no numéricos; lectura prospectiva limitada._"
+    tot = float(v.sum())
+    if tot == 0:
+        return "_Suma cero; no se deriva reparto relativo._"
+    mx_idx = v.idxmax()
+    top_lab = str(df.loc[mx_idx, "label"])
+    pct = 100.0 * float(v.loc[mx_idx]) / tot
+    parts = [
+        f"**Reparto del resultado:** **{top_lab}** concentra ~**{_fmt_qty_es(pct)}%** del total de valores mostrados en la consulta ejecutada."
+    ]
+    parts.append(
+        "**Prospectiva:** en consultas de agregación (capacidad, inversión, cobertura), ese liderazgo indicaría **dónde actuaría primero una política horizontal** (p. ej. subsidio o meta regional); "
+        "debe validarse con la unidad de `value` y el filtro de año usados al ejecutar."
+    )
+    return "\n\n".join(parts)
+
+
+def _chart_interp(
+    resumen_datos: str,
+    notas_metodologicas: str = "",
+    export_key: str | None = None,
+    prospectiva: str = "",
+) -> None:
+    """Resumen a partir del dataframe de la gráfica; lectura prospectiva opcional; `export_key` habilita descarga .md."""
     with st.expander("📌 Interpretación", expanded=False):
         st.markdown("##### Resumen automático")
         st.markdown(resumen_datos)
+        if prospectiva.strip():
+            st.markdown("##### Lectura prospectiva")
+            st.caption(
+                "Inferencia **cualitativa** a partir **solo** de los datos y filtros visibles; "
+                "no es modelo de pronóstico, escenario oficial ni asesoría de inversión."
+            )
+            st.markdown(prospectiva)
         if notas_metodologicas.strip():
             st.markdown("##### Lectura metodológica")
             st.markdown(notas_metodologicas)
         if export_key:
             md = "## Resumen automático\n\n" + resumen_datos + "\n"
+            if prospectiva.strip():
+                md += "\n## Lectura prospectiva\n\n" + prospectiva + "\n"
             if notas_metodologicas.strip():
                 md += "\n## Lectura metodológica\n\n" + notas_metodologicas + "\n"
             st.download_button(
@@ -938,6 +1147,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             "**Cómo leerlo:** el ángulo de cada sector es proporcional al subtotal de MW; refleja el **mix** de esta muestra, no el sistema país completo.\n\n"
             "**Matices:** unidades grandes (p. ej. hidro) pueden dominar el pastel aunque existan más plantas de otras tecnologías.",
             export_key="dash_mix_capacidad",
+            prospectiva=_prospectiva_capacidad_por_tipo(capacidad_por_tipo),
         )
 
     with col_right:
@@ -963,6 +1173,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             "**Cómo leerlo:** barras más altas = mayor costo nivelado en la media simple de proyectos; la ponderación re-pesa por **capacidad instalada**.\n\n"
             "**Matices:** ninguno de los dos sustituye el LCOE del sistema país; son indicadores de la **muestra** cargada.",
             export_key="dash_lcoe_tech",
+            prospectiva=_prospectiva_lcoe_por_tipo(lcoe_por_tipo),
         )
 
     col_left, col_right = st.columns(2)
@@ -1008,6 +1219,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             "**Cómo leerlo:** barras **agrupadas** comparan inversión y gasto operativo por proyecto.\n\n"
             "**Matices:** muchos proyectos en eje X pueden requerir **scroll** o filtro en la vista Costos.",
             export_key="dash_capex_opex",
+            prospectiva=_prospectiva_capex_opex(capex_opex),
         )
 
     with col_right:
@@ -1039,6 +1251,7 @@ def _view_dashboard(d: dict[str, pd.DataFrame]) -> None:
             "**Cómo leerlo:** sectores amplios concentran la mayor parte del subtotal de usuarios **en esta muestra**.\n\n"
             "**Matices:** no equivale a población nacional ni a demanda eléctrica; depende de la definición operativa en datos.",
             export_key="dash_cobertura_donut",
+            prospectiva=_prospectiva_usuarios_por_proyecto(cobertura_proyecto),
         )
 
     st.markdown("### Tipos de energía renovable")
@@ -1276,6 +1489,7 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
             "**Cómo leerlo:** compare **costo nivelado** entre plantas; el color es la **tecnología**.\n\n"
             "**Matices:** filtrando un solo tipo, el contraste es **intra-tecnología**.",
             export_key=f"costos_lcoe_{anio_sel}",
+            prospectiva=_prospectiva_costos_proyecto(costos_f, "lcoe", int(anio_sel)),
         )
     with col2:
         chart = (
@@ -1301,6 +1515,7 @@ def _view_costos(d: dict[str, pd.DataFrame]) -> None:
             "**Cómo leerlo:** identifica **escala de inversión** relativa; no implica orden igual al LCOE.\n\n"
             "**Matices:** CAPEX alto con LCOE moderado puede reflejar **vida útil** u **hipótesis de generación** distintas.",
             export_key=f"costos_capex_{anio_sel}",
+            prospectiva=_prospectiva_costos_proyecto(costos_f, "capex", int(anio_sel)),
         )
 
     st.markdown("### Tabla")
@@ -1377,6 +1592,7 @@ def _view_cobertura(d: dict[str, pd.DataFrame]) -> None:
             "**Cómo leerlo:** barras más altas concentran más peso en la variable de cobertura **de la muestra**.\n\n"
             "**Matices:** validar definición operativa antes de extrapolar a nivel sectorial.",
             export_key="cobertura_usuarios",
+            prospectiva=_prospectiva_usuarios_por_proyecto(cobertura[["nombre", "usuarios"]]),
         )
     with col2:
         base = alt.Chart(cobertura_viz).encode(
@@ -1402,6 +1618,7 @@ def _view_cobertura(d: dict[str, pd.DataFrame]) -> None:
             "**Cómo leerlo:** eje acotado (95–100) para resaltar diferencias pequeñas.\n\n"
             "**Matices:** si la muestra es casi constante, el gráfico se verá plano; con series largas conviene revisar outliers.",
             export_key="cobertura_disponibilidad",
+            prospectiva=_prospectiva_disponibilidad(cobertura),
         )
 
     st.markdown("### Tabla")
@@ -1467,6 +1684,7 @@ def _view_regulacion(d: dict[str, pd.DataFrame]) -> None:
         "**Cómo leerlo:** el sector refleja la magnitud del porcentaje **respecto a la suma** dibujada —no es impacto fiscal en pesos.\n\n"
         "**Matices:** el efecto real depende de **base gravable**, elegibilidad y ordenamiento jurídico.",
         export_key="regulacion_incentivos",
+        prospectiva=_prospectiva_regulacion(regulacion),
     )
 
 
@@ -1646,6 +1864,7 @@ def _view_consultas(d: dict[str, pd.DataFrame]) -> None:
         "**Cómo leerlo:** palette **Tableau 10** para distinguir categorías arbitrarias (p. ej. departamentos).\n\n"
         "**Matices:** conecte a **`MatrizEnergeticaCol`** para resultados operativos y SQL productivo.",
         export_key="consultas_resultado",
+        prospectiva=_prospectiva_consulta_resultado(result_df),
     )
 
 
