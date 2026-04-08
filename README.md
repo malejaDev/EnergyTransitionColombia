@@ -5,7 +5,7 @@
 
 Proyecto desarrollado en el marco del **curso de Análisis de Datos Integrador** de **Talento Tech**.
 
-## 🧑‍🤝‍🧑 Equipo y contexto
+## 🧑‍🤝‍🧑 Equipo y contexto (GRUPO H)
 
 - Claudia Arroyave  
 - Michely Muñoz  
